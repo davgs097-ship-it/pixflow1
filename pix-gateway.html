@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayOS — Gateway PIX + Checkout IA</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- QRCode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#08090d;--bg2:#0e1018;--bg3:#151720;
+  --border:#1e2130;--border2:#2a2f45;
+  --accent:#4f6ef7;--accent2:#7b93ff;--accent-glow:rgba(79,110,247,0.15);
+  --green:#22d47a;--green-glow:rgba(34,212,122,0.12);
+  --amber:#f5a623;--red:#ff4f6a;
+  --text:#e8eaf5;--text2:#7880a4;--text3:#4a5070;
+  --z1:#ff6b35;--pp:#a855f7;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
+
+/* ── AUTH ── */
+#auth-screen{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;}
+#auth-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(79,110,247,0.1),transparent 70%),radial-gradient(ellipse 50% 40% at 80% 100%,rgba(34,212,122,0.06),transparent 60%);pointer-events:none;}
+.auth-box{width:100%;max-width:440px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;overflow:hidden;position:relative;animation:authIn .5s cubic-bezier(.34,1.56,.64,1);}
+@keyframes authIn{from{opacity:0;transform:translateY(30px) scale(.96);}to{opacity:1;transform:none;}}
+.auth-header{padding:32px 36px 28px;border-bottom:1px solid var(--border);text-align:center;}
+.auth-logo{font-family:'Bricolage Grotesque',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-1.5px;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.auth-tagline{font-size:.72rem;color:var(--text3);letter-spacing:1px;}
+.auth-tabs{display:flex;background:var(--bg3);border-radius:10px;padding:4px;margin:20px 0 0;}
+.auth-tab{flex:1;padding:8px;text-align:center;border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;cursor:pointer;color:var(--text3);transition:all .2s;border:none;background:none;}
+.auth-tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.auth-body{padding:28px 36px 32px;}
+.auth-fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.auth-fg label{font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);}
+.auth-input{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.85rem;padding:11px 14px;outline:none;transition:all .15s;width:100%;}
+.auth-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.auth-input.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(255,79,106,.12);}
+.auth-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.auth-btn{width:100%;padding:12px;border-radius:9px;border:none;font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .18s;margin-top:6px;background:linear-gradient(135deg,var(--accent),#3d5cf5);color:#fff;letter-spacing:.5px;}
+.auth-btn:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,110,247,.35);}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.auth-msg{border-radius:7px;padding:9px 12px;font-size:.75rem;margin-bottom:14px;display:none;}
+.auth-msg.show{display:block;animation:fadeUp .2s ease;}
+.auth-msg.error{background:rgba(255,79,106,.08);border:1px solid rgba(255,79,106,.2);color:var(--red);}
+.auth-msg.success{background:var(--green-glow);border:1px solid rgba(34,212,122,.2);color:var(--green);}
+.auth-footer{font-size:.68rem;color:var(--text3);text-align:center;margin-top:16px;line-height:1.6;}
+.auth-footer a{color:var(--accent2);cursor:pointer;}
+.pw-wrap{position:relative;}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:.8rem;padding:2px 4px;}
+.pw-toggle:hover{color:var(--text2);}
+/* supabase config notice */
+.sb-notice{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:.75rem;color:var(--amber);line-height:1.7;}
+.sb-notice strong{display:block;margin-bottom:4px;font-size:.8rem;}
+.sb-notice code{background:rgba(245,166,35,.1);padding:1px 5px;border-radius:3px;font-size:.72rem;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:224px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;padding:0 0 24px;}
+.logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.logo-mark{font-family:'Bricolage Grotesque',sans-serif;font-size:1.3rem;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,var(--accent),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-sub{font-size:.62rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.nav-section{padding:0 12px;margin-bottom:4px;}
+.nav-label{font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:8px 8px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--text2);font-size:.78rem;cursor:pointer;transition:all .15s;border:1px solid transparent;text-decoration:none;}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{background:var(--accent-glow);color:var(--accent2);border-color:rgba(79,110,247,.2);}
+.nav-item .icon{width:16px;text-align:center;font-size:.85rem;}
+.gw-pills{padding:0 12px;margin-top:auto;}
+.gw-pill{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);margin-bottom:6px;font-size:.72rem;}
+.gw-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.gw-name{color:var(--text2);}
+.gw-ok{margin-left:auto;font-size:.62rem;color:var(--green);}
+
+/* ── MAIN ── */
+.main{margin-left:224px;min-height:100vh;}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(8,9,13,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;}
+.page-title{font-family:'Bricolage Grotesque',sans-serif;font-size:1rem;font-weight:700;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.api-badge{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:.72rem;color:var(--text2);}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.user-menu{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all .15s;position:relative;}
+.user-menu:hover{border-color:var(--border2);}
+.u-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:.72rem;color:#fff;flex-shrink:0;}
+.u-name{font-size:.75rem;}
+.u-dropdown{position:absolute;top:calc(100% + 8px);right:0;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;z-index:200;display:none;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.u-dropdown.show{display:block;animation:fadeUp .2s ease;}
+.dd-item{display:flex;align-items:center;gap:9px;padding:10px 14px;font-size:.78rem;color:var(--text2);cursor:pointer;transition:all .12s;border:none;background:none;width:100%;}
+.dd-item:hover{background:var(--bg3);color:var(--text);}
+.dd-item.danger:hover{color:var(--red);}
+.dd-sep{height:1px;background:var(--border);margin:4px 0;}
+
+/* ── CONTENT ── */
+.content{padding:28px 32px;}
+.panel{display:none;animation:fadeUp .3s ease;}
+.panel.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;transition:border-color .2s;}
+.stat-card:hover{border-color:var(--border2);}
+.stat-label{font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.stat-val{font-family:'Bricolage Grotesque',sans-serif;font-size:1.6rem;font-weight:700;}
+.stat-sub{font-size:.68rem;color:var(--text3);margin-top:4px;}
+
+/* SECTION HEAD */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sec-title{font-family:'Bricolage Grotesque',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:.5px;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.sec-title::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block;}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 26px;margin-bottom:18px;transition:border-color .2s;}
+.card:hover{border-color:var(--border2);}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+.card-title{font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:700;}
+.mbadge{font-size:.65rem;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:5px;font-weight:500;}
+.post{background:rgba(34,212,122,.1);color:var(--green);border:1px solid rgba(34,212,122,.2);}
+.get{background:rgba(79,110,247,.1);color:var(--accent2);border:1px solid rgba(79,110,247,.2);}
+
+/* GW SELECTOR */
+.gw-sel{display:flex;gap:8px;margin-bottom:20px;}
+.gw-btn{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:'IBM Plex Mono',monospace;font-size:.75rem;cursor:pointer;transition:all .15s;}
+.gw-btn:hover{border-color:var(--border2);color:var(--text);}
+.gw-btn.az1{border-color:var(--z1);color:var(--z1);background:rgba(255,107,53,.08);}
+.gw-btn.app{border-color:var(--pp);color:var(--pp);background:rgba(168,85,247,.08);}
+.gw-ind{width:8px;height:8px;border-radius:50%;}
+.c-z1{background:var(--z1);}.c-pp{background:var(--pp);}
+
+/* FORM */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.f{display:flex;flex-direction:column;gap:6px;}
+.f.full{grid-column:1/-1;}
+label{font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.82rem;padding:9px 13px;outline:none;transition:all .15s;-webkit-appearance:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+select option{background:var(--bg3);}
+textarea{resize:vertical;min-height:70px;line-height:1.6;}
+
+/* BTN */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:8px;border:none;font-family:'IBM Plex Mono',monospace;font-size:.8rem;cursor:pointer;transition:all .18s;letter-spacing:.3px;}
+.btn-a{background:var(--accent);color:#fff;font-weight:500;}
+.btn-a:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,110,247,.3);}
+.btn-g{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-g:hover{background:var(--bg3);color:var(--text);border-color:var(--border2);}
+.btn-gr{background:var(--green);color:#000;font-weight:500;}
+.btn-gr:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-row{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
+
+/* RESP */
+.resp{background:#060810;border:1px solid var(--border);border-radius:10px;margin-top:16px;overflow:hidden;display:none;}
+.resp.show{display:block;animation:fadeUp .3s ease;}
+.resp-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg3);}
+.r-status{font-size:.68rem;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:4px;}
+.s-ok{background:rgba(34,212,122,.12);color:var(--green);border:1px solid rgba(34,212,122,.2);}
+.s-err{background:rgba(255,79,106,.12);color:var(--red);border:1px solid rgba(255,79,106,.2);}
+.copy-btn{background:none;border:none;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:.68rem;cursor:pointer;padding:3px 8px;border-radius:4px;}
+.copy-btn:hover{color:var(--accent2);background:var(--accent-glow);}
+pre{padding:16px;font-size:.76rem;line-height:1.7;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;color:#a0aec0;}
+pre::-webkit-scrollbar{width:3px;}
+pre::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* QR BOX */
+.qr-box{background:#060810;border:1px solid var(--border);border-radius:10px;padding:24px;margin-top:16px;display:none;flex-direction:column;align-items:center;gap:14px;}
+.qr-box.show{display:flex;animation:fadeUp .4s ease;}
+.qr-wrap{background:#fff;padding:10px;border-radius:10px;}
+.pix-code{font-size:.68rem;color:var(--text3);text-align:center;word-break:break-all;max-width:400px;line-height:1.6;cursor:pointer;padding:10px 14px;border-radius:6px;border:1px dashed var(--border);transition:all .2s;}
+.pix-code:hover{border-color:var(--green);color:var(--green);}
+
+/* CPF FALLBACK BOX */
+.cpf-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;}
+.cpf-box-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.cpf-box-tag{margin-left:auto;font-size:.65rem;color:var(--accent2);background:var(--accent-glow);border:1px solid rgba(79,110,247,.2);padding:2px 8px;border-radius:4px;}
+
+/* ── AI CHECKOUT ── */
+.ai-panel{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px;}
+.ai-hd{padding:20px 26px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(79,110,247,.06),rgba(34,212,122,.04));display:flex;align-items:center;gap:12px;}
+.ai-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.ai-title{font-family:'Bricolage Grotesque',sans-serif;font-size:1rem;font-weight:700;}
+.ai-sub{font-size:.72rem;color:var(--text3);margin-top:2px;}
+.ai-body{padding:22px 26px;}
+.prompt-wrap{position:relative;margin-bottom:16px;}
+.prompt-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.82rem;padding:14px 50px 14px 16px;outline:none;resize:none;min-height:90px;transition:all .15s;line-height:1.6;}
+.prompt-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.prompt-send{position:absolute;bottom:12px;right:12px;width:32px;height:32px;border-radius:7px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;transition:all .15s;}
+.prompt-send:hover{background:var(--accent2);transform:scale(1.05);}
+.prompt-send:disabled{background:var(--border);cursor:not-allowed;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px;}
+.chip{padding:5px 12px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);font-size:.7rem;color:var(--text3);cursor:pointer;transition:all .15s;}
+.chip:hover{border-color:var(--accent);color:var(--accent2);}
+.ai-gw-sel{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.ai-gw-sel label{font-size:.65rem;letter-spacing:1px;color:var(--text3);text-transform:uppercase;}
+
+/* CHECKOUT PREVIEW */
+.co-preview{background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:none;}
+.co-preview.show{display:block;animation:fadeUp .4s ease;}
+.prev-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+.prev-dots{display:flex;gap:5px;}
+.prev-dot{width:10px;height:10px;border-radius:50%;}
+.prev-url{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:.68rem;color:var(--text3);text-align:center;}
+.iframe-code{background:#060810;border:1px solid var(--border);border-radius:8px;padding:14px;font-size:.72rem;color:#7aff9c;line-height:1.6;word-break:break-all;margin-top:10px;display:none;}
+.iframe-code.show{display:block;animation:fadeUp .3s ease;}
+iframe#co-frame{width:100%;border:none;min-height:520px;display:block;}
+
+/* ── CHECKOUTS LIST ── */
+.co-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.co-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;transition:border-color .2s;}
+.co-card:hover{border-color:var(--border2);}
+.co-card-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.co-card-slug{font-size:.68rem;color:var(--accent2);margin-bottom:12px;}
+.co-card-meta{font-size:.7rem;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.co-card-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.co-action{padding:5px 12px;border-radius:6px;font-size:.7rem;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s;font-family:'IBM Plex Mono',monospace;}
+.co-action:hover{background:var(--accent-glow);color:var(--accent2);border-color:rgba(79,110,247,.3);}
+.co-action.dl{color:var(--green);border-color:rgba(34,212,122,.25);}
+.co-action.dl:hover{background:var(--green-glow);}
+.co-action.del{color:var(--red);border-color:rgba(255,79,106,.2);}
+.co-action.del:hover{background:rgba(255,79,106,.08);}
+.co-empty{text-align:center;padding:48px 20px;color:var(--text3);font-size:.82rem;}
+
+/* ── DOMAIN ── */
+.domain-steps{counter-reset:step;}
+.domain-step{display:flex;gap:16px;margin-bottom:20px;counter-increment:step;}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--accent-glow);border:1px solid rgba(79,110,247,.3);display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--accent2);flex-shrink:0;font-weight:700;}
+.step-body{flex:1;padding-top:4px;}
+.step-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;margin-bottom:6px;font-size:.88rem;}
+.step-desc{font-size:.75rem;color:var(--text3);line-height:1.7;}
+.dns-table{width:100%;border-collapse:collapse;font-size:.75rem;margin-top:10px;}
+.dns-table th{text-align:left;padding:7px 10px;color:var(--text3);font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.dns-table td{padding:9px 10px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;color:var(--text2);}
+.dns-table td.mono{color:var(--green);}
+.domain-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;font-size:.72rem;}
+.domain-pending{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);color:var(--amber);}
+.domain-verified{background:var(--green-glow);border:1px solid rgba(34,212,122,.2);color:var(--green);}
+
+/* TX TABLE */
+.tx-table{width:100%;border-collapse:collapse;font-size:.75rem;}
+.tx-table th{text-align:left;padding:9px 12px;color:var(--text3);font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.tx-table td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text2);}
+.tx-table tr:last-child td{border-bottom:none;}
+.tx-table tr:hover td{background:var(--bg3);}
+.tx-gw{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:4px;font-size:.65rem;}
+.tx-gw.z1{background:rgba(255,107,53,.1);color:var(--z1);}
+.tx-gw.pp{background:rgba(168,85,247,.1);color:var(--pp);}
+.tx-st{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:.65rem;}
+.ts-ok{background:var(--green-glow);color:var(--green);}
+.ts-pend{background:rgba(245,166,35,.1);color:var(--amber);}
+.ts-fail{background:rgba(255,79,106,.1);color:var(--red);}
+
+/* PROFILE */
+.plan-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.72rem;background:linear-gradient(135deg,rgba(79,110,247,.15),rgba(34,212,122,.1));border:1px solid rgba(79,110,247,.25);color:var(--accent2);}
+
+/* SPINNER / TOAST */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite;}
+@keyframes rot{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:24px;right:24px;z-index:9998;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:.78rem;display:flex;align-items:center;gap:9px;transform:translateY(60px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:5000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal-bg.show{display:flex;animation:fadeUp .2s ease;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:500px;overflow:hidden;}
+.modal-hd{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1.1rem;padding:2px 6px;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:24px;}
+.modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;}.stats{grid-template-columns:1fr 1fr;}.content{padding:18px 16px;}.topbar{padding:12px 16px;}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     AUTH SCREEN
+════════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-header">
+      <div class="auth-logo">PayOS</div>
+      <div class="auth-tagline">Gateway PIX + Checkout com IA</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
+        <button class="auth-tab" id="tab-reg" onclick="switchTab('reg')">Criar conta</button>
+      </div>
+    </div>
+    <div class="auth-body">
+      <div class="sb-notice" id="sb-notice">
+        <strong>⚙️ Configure o Supabase antes de usar</strong>
+        Substitua <code>SEU_SUPABASE_URL</code> e <code>SEU_SUPABASE_ANON_KEY</code> no topo do &lt;script&gt; pelas credenciais do seu projeto em <strong>supabase.com</strong>.
+      </div>
+      <div class="auth-msg" id="auth-msg"></div>
+
+      <!-- LOGIN -->
+      <div id="form-login">
+        <div class="auth-fg"><label>E-mail</label><input class="auth-input" id="l-email" type="email" placeholder="seu@email.com"></div>
+        <div class="auth-fg"><label>Senha</label>
+          <div class="pw-wrap"><input class="auth-input" id="l-pass" type="password" placeholder="••••••••"><button class="pw-toggle" onclick="togglePw('l-pass',this)">👁</button></div>
+        </div>
+        <button class="auth-btn" id="l-btn" onclick="doLogin()"><span id="l-btn-txt">Entrar no painel</span></button>
+        <div class="auth-footer">Sem conta? <a onclick="switchTab('reg')">Criar gratuitamente</a></div>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="form-reg" style="display:none;">
+        <div class="auth-row">
+          <div class="auth-fg"><label>Nome</label><input class="auth-input" id="r-name" type="text" placeholder="Nome"></div>
+          <div class="auth-fg"><label>Sobrenome</label><input class="auth-input" id="r-last" type="text" placeholder="Sobrenome"></div>
+        </div>
+        <div class="auth-fg"><label>E-mail</label><input class="auth-input" id="r-email" type="email" placeholder="seu@email.com"></div>
+        <div class="auth-fg"><label>Empresa <span style="color:var(--text3)">(opcional)</span></label><input class="auth-input" id="r-company" type="text" placeholder="Nome do negócio"></div>
+        <div class="auth-fg"><label>Senha</label>
+          <div class="pw-wrap"><input class="auth-input" id="r-pass" type="password" placeholder="Mín. 8 caracteres"><button class="pw-toggle" onclick="togglePw('r-pass',this)">👁</button></div>
+        </div>
+        <div class="auth-fg"><label>Confirmar senha</label>
+          <div class="pw-wrap"><input class="auth-input" id="r-pass2" type="password" placeholder="Repita a senha"><button class="pw-toggle" onclick="togglePw('r-pass2',this)">👁</button></div>
+        </div>
+        <button class="auth-btn" id="r-btn" onclick="doRegister()"><span id="r-btn-txt">Criar minha conta</span></button>
+        <div class="auth-footer">Já tem conta? <a onclick="switchTab('login')">Fazer login</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP
+════════════════════════════════════════════ -->
+<div id="app" style="display:none;">
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">PayOS</div>
+    <div class="logo-sub">PIX Gateway Suite</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Principal</div>
+    <a class="nav-item active" onclick="go('dashboard',this)"><span class="icon">◈</span> Dashboard</a>
+    <a class="nav-item" onclick="go('transacoes',this)"><span class="icon">⇄</span> Transações</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Gateways</div>
+    <a class="nav-item" onclick="go('z1',this)"><span class="icon" style="color:var(--z1)">◉</span> Zero One Pay</a>
+    <a class="nav-item" onclick="go('pp',this)"><span class="icon" style="color:var(--pp)">◉</span> Paradise Pags</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Checkouts</div>
+    <a class="nav-item" onclick="go('ai',this)"><span class="icon">✦</span> Gerar com IA</a>
+    <a class="nav-item" onclick="go('checkouts',this)"><span class="icon">▤</span> Meus Checkouts</a>
+    <a class="nav-item" onclick="go('dominios',this)"><span class="icon">🌐</span> Domínios</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Conta</div>
+    <a class="nav-item" onclick="go('perfil',this)"><span class="icon">👤</span> Meu Perfil</a>
+  </div>
+  <div class="gw-pills">
+    <div class="gw-pill"><span class="gw-dot" style="background:var(--z1);box-shadow:0 0 6px var(--z1)"></span><span class="gw-name">Zero One Pay</span><span class="gw-ok">● ativo</span></div>
+    <div class="gw-pill"><span class="gw-dot" style="background:var(--pp);box-shadow:0 0 6px var(--pp)"></span><span class="gw-name">Paradise Pags</span><span class="gw-ok">● ativo</span></div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <div class="api-badge"><span class="api-dot"></span><span>Supabase conectado</span></div>
+      <div class="user-menu" onclick="toggleDrop()">
+        <div class="u-avatar" id="u-av">?</div>
+        <span class="u-name" id="u-nm">Usuário</span>
+        <span style="color:var(--text3);font-size:.7rem;">▾</span>
+        <div class="u-dropdown" id="u-drop">
+          <button class="dd-item" onclick="go('perfil',null);closeDrop()">👤 Meu perfil</button>
+          <div class="dd-sep"></div>
+          <button class="dd-item danger" onclick="doLogout()">⎋ Sair</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Transações</div><div class="stat-val" id="d-tx">0</div><div class="stat-sub">nesta sessão</div></div>
+        <div class="stat-card"><div class="stat-label">Checkouts gerados</div><div class="stat-val" id="d-co">0</div><div class="stat-sub">salvos no Supabase</div></div>
+        <div class="stat-card"><div class="stat-label">Domínios ativos</div><div class="stat-val" id="d-dom">0</div><div class="stat-sub">customizados</div></div>
+        <div class="stat-card"><div class="stat-label">Gateways</div><div class="stat-val">2</div><div class="stat-sub">Zero One · Paradise</div></div>
+      </div>
+      <div class="sec-head"><div class="sec-title">Acesso rápido</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div class="card" style="cursor:pointer;" onclick="go('z1',null)">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">◉</div>
+            <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:700;color:var(--z1);">Zero One Pay</div><div style="font-size:.7rem;color:var(--text3)">POST /v1/transactions</div></div>
+          </div>
+        </div>
+        <div class="card" style="cursor:pointer;" onclick="go('pp',null)">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">◉</div>
+            <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:700;color:var(--pp);">Paradise Pags</div><div style="font-size:.7rem;color:var(--text3)">POST /v1/transaction.php</div></div>
+          </div>
+        </div>
+        <div class="card" style="cursor:pointer;background:linear-gradient(135deg,rgba(79,110,247,.06),rgba(34,212,122,.03));" onclick="go('ai',null)">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;font-size:1rem;color:#000;">✦</div>
+            <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:700;">Checkout com IA</div><div style="font-size:.7rem;color:var(--text3)">Gerar + hospedar</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZERO ONE PAY -->
+    <div class="panel" id="panel-z1">
+      <div class="sec-head"><div class="sec-title">Zero One Pay — PIX</div></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title" style="color:var(--z1)">Nova transação PIX</span><span class="mbadge post">POST</span></div>
+        <div class="fg">
+          <div class="f"><label>API Token</label><input type="password" id="z1-tok" placeholder="SEU_API_TOKEN"></div>
+          <div class="f"><label>Offer Hash</label><input type="text" id="z1-off" value="7becb"></div>
+          <div class="f"><label>Valor (centavos)</label><input type="number" id="z1-amt" value="15000"></div>
+          <div class="f"><label>Product Hash</label><input type="text" id="z1-prod" value="7tjdfkshdv"></div>
+          <div class="f"><label>Título do Produto</label><input type="text" id="z1-ttl" value="Curso de Programação"></div>
+          <div class="f"><label>Quantidade</label><input type="number" id="z1-qty" value="1"></div>
+          <div class="f"><label>Nome <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="z1-name" placeholder="Nome do cliente"></div>
+          <div class="f"><label>E-mail <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="email" id="z1-email" placeholder="email@cliente.com"></div>
+          <div class="f"><label>Telefone <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="z1-tel" placeholder="21999999999"></div>
+          <div class="f"><label>CPF do cliente <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="z1-doc" placeholder="deixe vazio para usar CPF padrão"></div>
+          <div class="f"><label>CPF padrão (fallback) <span style="color:var(--accent2);font-size:.6rem;">usado se cliente não informar</span></label><input type="text" id="z1-dfl" placeholder="CPF do vendedor para comprovante"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-a" onclick="z1Submit()" id="z1-btn"><span id="z1-bi">⚡</span><span id="z1-bt">Gerar Cobrança PIX</span></button>
+          <button class="btn btn-g" onclick="z1Clear()">Limpar</button>
+        </div>
+      </div>
+      <div class="resp" id="z1-resp"><div class="resp-hd"><span class="r-status" id="z1-rs"></span><button class="copy-btn" onclick="cpPre('z1-pre')">copiar</button></div><pre id="z1-pre"></pre></div>
+      <div class="qr-box" id="z1-qr"><div style="font-size:.72rem;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">QR Code PIX</div><div class="qr-wrap"><canvas id="z1-cv" width="180" height="180"></canvas></div><div class="pix-code" id="z1-bc" onclick="cpPix('z1-bc')">—</div></div>
+    </div>
+
+    <!-- PARADISE PAGS -->
+    <div class="panel" id="panel-pp">
+      <div class="sec-head"><div class="sec-title">Paradise Pags — PIX</div></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title" style="color:var(--pp)">Nova transação PIX</span><span class="mbadge post">POST</span></div>
+        <div class="fg">
+          <div class="f"><label>X-API-Key</label><input type="password" id="pp-key" placeholder="sk_sua_chave_secreta"></div>
+          <div class="f"><label>Valor (centavos)</label><input type="number" id="pp-amt" value="1000"></div>
+          <div class="f full"><label>Descrição</label><input type="text" id="pp-desc" value="Produto Teste"></div>
+          <div class="f"><label>Referência</label><input type="text" id="pp-ref" value="REF-12345"></div>
+          <div class="f"><label>Nome <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="pp-name" placeholder="Nome do cliente"></div>
+          <div class="f"><label>E-mail <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="email" id="pp-email" placeholder="email@cliente.com"></div>
+          <div class="f"><label>Telefone <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="pp-tel" placeholder="11999999999"></div>
+          <div class="f"><label>CPF do cliente <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="pp-doc" placeholder="deixe vazio para usar CPF padrão"></div>
+          <div class="f"><label>CPF padrão (fallback) <span style="color:var(--accent2);font-size:.6rem;">usado se cliente não informar</span></label><input type="text" id="pp-dfl" placeholder="CPF do vendedor"></div>
+          <div class="f"><label>UTM Source <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label><input type="text" id="pp-utm" placeholder="FB"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" style="background:var(--pp);color:#fff;" onclick="ppSubmit()" id="pp-btn"><span id="pp-bi">⚡</span><span id="pp-bt">Gerar Cobrança PIX</span></button>
+          <button class="btn btn-g" onclick="ppClear()">Limpar</button>
+        </div>
+      </div>
+      <div class="resp" id="pp-resp"><div class="resp-hd"><span class="r-status" id="pp-rs"></span><button class="copy-btn" onclick="cpPre('pp-pre')">copiar</button></div><pre id="pp-pre"></pre></div>
+      <div class="qr-box" id="pp-qr"><div style="font-size:.72rem;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">QR Code PIX</div><div class="qr-wrap"><canvas id="pp-cv" width="180" height="180"></canvas></div><div class="pix-code" id="pp-bc" onclick="cpPix('pp-bc')">—</div></div>
+    </div>
+
+    <!-- TRANSAÇÕES -->
+    <div class="panel" id="panel-transacoes">
+      <div class="sec-head"><div class="sec-title">Histórico de Transações</div></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table class="tx-table">
+          <thead><tr><th>ID</th><th>Gateway</th><th>Produto</th><th>Valor</th><th>CPF usado</th><th>Status</th><th>Hora</th></tr></thead>
+          <tbody id="tx-body"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3);">Nenhuma transação ainda.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AI CHECKOUT GENERATOR -->
+    <div class="panel" id="panel-ai">
+      <div class="ai-panel">
+        <div class="ai-hd">
+          <div class="ai-icon">✦</div>
+          <div><div class="ai-title">Gerador de Checkout com IA</div><div class="ai-sub">Descreva o produto — a IA gera o checkout, salva no Supabase e publica o link</div></div>
+        </div>
+        <div class="ai-body">
+          <div class="ai-gw-sel">
+            <label>Gateway:</label>
+            <button class="gw-btn az1" id="ai-z1" onclick="selAiGw('z1')"><span class="gw-ind c-z1"></span>Zero One Pay</button>
+            <button class="gw-btn" id="ai-pp" onclick="selAiGw('pp')"><span class="gw-ind c-pp"></span>Paradise Pags</button>
+          </div>
+
+          <!-- CPF PADRÃO DO VENDEDOR -->
+          <div class="cpf-box">
+            <div class="cpf-box-head">
+              <span>🪪</span>
+              <span style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);font-weight:600;">CPF padrão do vendedor</span>
+              <span class="cpf-box-tag">fallback quando lead não informar CPF</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="f" style="margin:0;"><label>CPF padrão</label><input type="text" id="ai-cpf" placeholder="000.000.000-00"></div>
+              <div class="f" style="margin:0;"><label>Nome para comprovante</label><input type="text" id="ai-cname" placeholder="Nome do vendedor"></div>
+            </div>
+            <div style="margin-top:8px;font-size:.68rem;color:var(--text3);line-height:1.5;">ℹ️ Se o lead preencher CPF próprio, ele tem prioridade. O padrão só aparece no comprovante PIX como fallback.</div>
+          </div>
+
+          <!-- DOMÍNIO -->
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);font-weight:600;margin-bottom:10px;">🌐 Publicação do checkout</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="f" style="margin:0;">
+                <label>Hospedar em</label>
+                <select id="ai-host">
+                  <option value="payos">payos.app/checkout/...</option>
+                  <option value="custom">Domínio customizado</option>
+                </select>
+              </div>
+              <div class="f" style="margin:0;" id="ai-domain-wrap" style="display:none;">
+                <label>Domínio cadastrado</label>
+                <select id="ai-domain-sel"><option value="">-- Selecione --</option></select>
+              </div>
+              <div class="f" style="margin:0;">
+                <label>Slug personalizado <span style="color:var(--text3);font-size:.6rem;">(opcional)</span></label>
+                <input type="text" id="ai-slug" placeholder="ex: curso-excel (gerado auto se vazio)">
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:.65rem;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Exemplos de prompt</div>
+          <div class="chips">
+            <div class="chip" onclick="fillPrompt(this)">Checkout para curso de Excel R$197</div>
+            <div class="chip" onclick="fillPrompt(this)">Página de venda de mentoria de tráfego R$997</div>
+            <div class="chip" onclick="fillPrompt(this)">Checkout de ebook de finanças R$29,90</div>
+            <div class="chip" onclick="fillPrompt(this)">Consultoria jurídica R$450 com urgência</div>
+          </div>
+
+          <div class="prompt-wrap">
+            <textarea class="prompt-input" id="ai-prompt" placeholder="Ex: Crie um checkout para venda de curso de Python R$297, com garantia de 7 dias, bônus de comunidade VIP e campo de cupom de desconto..."></textarea>
+            <button class="prompt-send" id="ai-send" onclick="genCheckout()">↑</button>
+          </div>
+          <div id="ai-status" style="font-size:.75rem;color:var(--text3);margin-bottom:12px;display:none;"></div>
+
+          <div class="co-preview" id="co-preview">
+            <div class="prev-bar">
+              <div class="prev-dots">
+                <div class="prev-dot" style="background:#ff5f57"></div>
+                <div class="prev-dot" style="background:#febc2e"></div>
+                <div class="prev-dot" style="background:#28c840"></div>
+              </div>
+              <div class="prev-url" id="prev-url">payos.app/checkout/...</div>
+            </div>
+            <iframe id="co-frame" title="Checkout Preview"></iframe>
+            <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <div id="co-link-badge" style="font-size:.72rem;color:var(--green);background:var(--green-glow);border:1px solid rgba(34,212,122,.2);padding:4px 12px;border-radius:6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+              <button class="btn btn-g" style="font-size:.72rem;padding:6px 14px;" onclick="showIframe()">&#60;/&#62; iFrame</button>
+              <button class="btn btn-gr" style="font-size:.72rem;padding:6px 14px;" onclick="dlCheckout()">⬇ Download HTML</button>
+              <button class="btn btn-a" style="font-size:.72rem;padding:6px 14px;" onclick="cpLink()">Copiar link</button>
+              <button class="btn btn-g" style="font-size:.72rem;padding:6px 14px;" onclick="genCheckout()">↻ Regenerar</button>
+            </div>
+            <div class="iframe-code" id="iframe-code"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEUS CHECKOUTS -->
+    <div class="panel" id="panel-checkouts">
+      <div class="sec-head">
+        <div class="sec-title">Meus Checkouts</div>
+        <button class="btn btn-a" style="font-size:.75rem;padding:7px 16px;" onclick="go('ai',null)">+ Novo Checkout</button>
+      </div>
+      <div id="co-grid" class="co-grid">
+        <div class="co-empty">Nenhum checkout ainda. <a onclick="go('ai',null)" style="color:var(--accent2);cursor:pointer;">Crie o primeiro →</a></div>
+      </div>
+    </div>
+
+    <!-- DOMÍNIOS -->
+    <div class="panel" id="panel-dominios">
+      <div class="sec-head">
+        <div class="sec-title">Domínios Customizados</div>
+        <button class="btn btn-a" style="font-size:.75rem;padding:7px 16px;" onclick="openAddDomain()">+ Adicionar domínio</button>
+      </div>
+      <div id="domains-list">
+        <div class="co-empty">Nenhum domínio cadastrado. Adicione um para hospedar checkouts no seu próprio domínio.</div>
+      </div>
+
+      <div class="sec-head" style="margin-top:28px;"><div class="sec-title">Como configurar seu domínio</div></div>
+      <div class="card">
+        <div class="domain-steps">
+          <div class="domain-step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Adicione o domínio no PayOS</div>
+              <div class="step-desc">Clique em "Adicionar domínio" e informe seu domínio ou subdomínio (ex: <code style="color:var(--accent2)">checkout.meusite.com</code> ou <code style="color:var(--accent2)">meusite.com/checkout</code>).</div>
+            </div>
+          </div>
+          <div class="domain-step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Configure o DNS no seu provedor</div>
+              <div class="step-desc">Acesse o painel DNS do seu domínio (Cloudflare, GoDaddy, Registro.br etc.) e adicione os registros abaixo:</div>
+              <table class="dns-table">
+                <thead><tr><th>Tipo</th><th>Nome</th><th>Valor</th><th>TTL</th></tr></thead>
+                <tbody>
+                  <tr><td>CNAME</td><td class="mono">checkout</td><td class="mono">payos-hosting.vercel.app</td><td>Auto</td></tr>
+                  <tr><td>TXT</td><td class="mono">_payos-verify</td><td class="mono">payos-verify=SEU_TOKEN</td><td>300</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="domain-step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Verifique e ative</div>
+              <div class="step-desc">Após configurar o DNS (pode levar até 24h para propagar), clique em "Verificar domínio" no PayOS. Após verificado, você pode selecionar esse domínio ao criar checkouts com IA.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERFIL -->
+    <div class="panel" id="panel-perfil">
+      <div class="sec-head"><div class="sec-title">Meu Perfil</div></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:20px;">
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;">
+          <div id="p-av-big" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.8rem;color:#fff;">?</div>
+          <div><div id="p-fullname" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:1rem;"></div><div id="p-email" style="font-size:.72rem;color:var(--text3);margin-top:3px;"></div></div>
+          <div class="plan-badge">✦ Plano Gratuito</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Dados da conta</span></div>
+          <div class="fg">
+            <div class="f"><label>Nome</label><input type="text" id="p-name"></div>
+            <div class="f"><label>Sobrenome</label><input type="text" id="p-last"></div>
+            <div class="f full"><label>E-mail</label><input type="email" id="p-email2" disabled style="opacity:.6;cursor:not-allowed;"></div>
+            <div class="f full"><label>Empresa</label><input type="text" id="p-company" placeholder="Nome da empresa (opcional)"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-a" onclick="saveProfile()">Salvar</button></div>
+        </div>
+      </div>
+      <div class="sec-head"><div class="sec-title">Segurança</div></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Alterar senha</span></div>
+        <div class="fg">
+          <div class="f"><label>Nova senha</label><div class="pw-wrap"><input type="password" id="p-pw1" placeholder="Mín. 8 caracteres"><button class="pw-toggle" onclick="togglePw('p-pw1',this)">👁</button></div></div>
+          <div class="f"><label>Confirmar nova senha</label><div class="pw-wrap"><input type="password" id="p-pw2" placeholder="Repita a senha"><button class="pw-toggle" onclick="togglePw('p-pw2',this)">👁</button></div></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-a" onclick="changePw()">Alterar senha</button></div>
+      </div>
+      <div class="sec-head"><div class="sec-title">Zona de perigo</div></div>
+      <div class="card" style="border-color:rgba(255,79,106,.15);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+          <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:var(--red);margin-bottom:4px;">Excluir conta</div><div style="font-size:.75rem;color:var(--text3);">Ação permanente e irreversível.</div></div>
+          <button class="btn" style="background:rgba(255,79,106,.1);color:var(--red);border:1px solid rgba(255,79,106,.25);" onclick="delAccount()">Excluir minha conta</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ADD DOMAIN MODAL -->
+<div class="modal-bg" id="modal-domain">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title">Adicionar domínio customizado</span>
+      <button class="modal-close" onclick="closeModal('modal-domain')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="f" style="margin-bottom:14px;"><label>Tipo de domínio</label>
+        <select id="dom-type" onchange="updateDomainType()">
+          <option value="subdomain">Subdomínio (checkout.meusite.com)</option>
+          <option value="subfolder">Subpasta (meusite.com/checkout)</option>
+        </select>
+      </div>
+      <div class="f" style="margin-bottom:14px;"><label>Domínio</label><input type="text" id="dom-input" placeholder="checkout.meusite.com"></div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:.75rem;color:var(--text3);line-height:1.8;" id="dom-hint">
+        Após adicionar, configure o CNAME <code style="color:var(--accent2)">checkout.meusite.com → payos-hosting.vercel.app</code> no seu DNS.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeModal('modal-domain')">Cancelar</button>
+      <button class="btn btn-a" onclick="addDomain()">Adicionar domínio</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="t-msg"></span></div>
+
+</div><!-- closes app -->
+
+<script>
+// ══════════════════════════════════════════════════════
+// ⚙️  CONFIGURAÇÃO SUPABASE — substitua abaixo
+// ══════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://khrygwuykvojnlnaqmys.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_xjkKLDtgk20N-mLA6qPoRg_isKGZjVa';
+const PAYOS_BASE    = 'https://payos.app';  // seu domínio PayOS no Vercel
+
+// ── Supabase client ───────────────────────────────────
+let sb;
+try {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+} catch(e) {
+  console.warn('Supabase não configurado — usando modo demo local');
+  sb = null;
+}
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let currentUser = null;
+let userMeta    = {};
+let txList      = [];
+let checkouts   = [];
+let domains     = [];
+let aiGw        = 'z1';
+let lastHtml    = '';
+let lastPrompt  = '';
+let lastSlug    = '';
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+const delay = ms => new Promise(r => setTimeout(r, ms));
+const $ = id => document.getElementById(id);
+const toast = (msg, dur=2800) => {
+  $('t-msg').textContent = msg;
+  const t = $('toast'); t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+};
+function togglePw(id, btn) {
+  const i = $(id);
+  i.type = i.type === 'password' ? 'text' : 'password';
+  btn.textContent = i.type === 'password' ? '👁' : '🙈';
+}
+function hl(json) {
+  return JSON.stringify(json, null, 2)
+    .replace(/"([^"]+)":/g, '<span style="color:#7b93ff">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span style="color:#fde68a">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span style="color:#6ee7b7">$1</span>')
+    .replace(/: (true|false|null)/g, ': <span style="color:#f9a8d4">$1</span>');
+}
+function showResp(pfx, code, data) {
+  const b = $(pfx+'-resp'), s = $(pfx+'-rs'), p = $(pfx+'-pre');
+  b.classList.add('show');
+  const ok = code >= 200 && code < 300;
+  s.className = 'r-status ' + (ok ? 's-ok' : 's-err');
+  s.textContent = ok ? `✓ ${code} OK` : `✗ ${code} Error`;
+  p.innerHTML = hl(data);
+}
+function cpPre(id) { navigator.clipboard.writeText($(id).textContent).then(() => toast('Copiado!')); }
+function cpPix(id) { const el=$(id); navigator.clipboard.writeText(el.getAttribute('data-full')||el.textContent).then(()=>toast('Código PIX copiado!')); }
+
+// PIX EMV
+function crc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?(c<<1)^0x1021:c<<1;}return((c&0xFFFF).toString(16).toUpperCase().padStart(4,'0'));}
+function pf(id,v){return id+v.length.toString().padStart(2,'0')+v;}
+function buildPix(chave,valor,txid){const mai=pf('26',pf('00','BR.GOV.BCB.PIX')+pf('01',chave));const ad=pf('62',pf('05',txid.substring(0,25).padEnd(25,'0')));const p=pf('00','01')+mai+pf('52','0000')+pf('53','986')+pf('54',parseFloat(valor).toFixed(2))+pf('58','BR')+pf('59','Recebedor')+pf('60','BRASIL')+ad+'6304';return p+crc16(p);}
+function drawQR(canvasId, code) {
+  try {
+    const tmp = document.createElement('div');
+    new QRCode(tmp,{text:code,width:180,height:180,colorDark:'#000',colorLight:'#fff'});
+    setTimeout(()=>{
+      const src=tmp.querySelector('canvas')||tmp.querySelector('img');
+      const c=$(canvasId); if(!c) return;
+      const ctx=c.getContext('2d');
+      if(src&&src.tagName==='CANVAS') ctx.drawImage(src,0,0,180,180);
+      else if(src){const i=new Image();i.onload=()=>ctx.drawImage(i,0,0,180,180);i.src=src.src;}
+    },150);
+  } catch(e){}
+}
+
+// ══════════════════════════════════════════════════════
+//  AUTH — Supabase
+// ══════════════════════════════════════════════════════
+function switchTab(tab) {
+  $('tab-login').classList.toggle('active', tab==='login');
+  $('tab-reg').classList.toggle('active', tab==='reg');
+  $('form-login').style.display = tab==='login' ? 'block' : 'none';
+  $('form-reg').style.display   = tab==='reg'   ? 'block' : 'none';
+  clearAuthMsg();
+}
+function authMsg(type, msg) {
+  const el = $('auth-msg');
+  el.textContent = msg;
+  el.className = 'auth-msg ' + type + ' show';
+  if (type !== 'success') setTimeout(() => el.classList.remove('show'), 4000);
+}
+function clearAuthMsg() { $('auth-msg').classList.remove('show'); }
+
+async function doLogin() {
+  const email = $('l-email').value.trim();
+  const pass  = $('l-pass').value;
+  if (!email || !pass) { authMsg('error','Preencha e-mail e senha.'); return; }
+  const btn = $('l-btn'); btn.disabled = true;
+  $('l-btn-txt').innerHTML = '<span class="spin"></span> Entrando...';
+
+  if (!sb) {
+    // DEMO MODE — sem Supabase
+    await delay(700);
+    currentUser = { id:'demo', email, user_metadata:{ name:'Demo', last_name:'User', company:'' }};
+    bootApp(); btn.disabled = false; $('l-btn-txt').textContent='Entrar no painel'; return;
+  }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; $('l-btn-txt').textContent='Entrar no painel';
+  if (error) { authMsg('error', error.message); return; }
+  currentUser = data.user;
+  bootApp();
+}
+
+async function doRegister() {
+  const name  = $('r-name').value.trim();
+  const last  = $('r-last').value.trim();
+  const email = $('r-email').value.trim().toLowerCase();
+  const co    = $('r-company').value.trim();
+  const pass  = $('r-pass').value;
+  const pass2 = $('r-pass2').value;
+
+  if (!name||!email||!pass||!pass2) { authMsg('error','Preencha todos os campos obrigatórios.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { authMsg('error','E-mail inválido.'); return; }
+  if (pass.length < 8) { authMsg('error','Senha mínima de 8 caracteres.'); return; }
+  if (pass !== pass2)  { authMsg('error','As senhas não coincidem.'); return; }
+
+  const btn = $('r-btn'); btn.disabled = true;
+  $('r-btn-txt').innerHTML = '<span class="spin"></span> Criando conta...';
+
+  if (!sb) {
+    await delay(900);
+    currentUser = { id:'demo', email, user_metadata:{ name, last_name:last, company:co }};
+    authMsg('success',`Conta criada! Bem-vindo, ${name}!`);
+    await delay(900);
+    bootApp(); btn.disabled = false; $('r-btn-txt').textContent='Criar minha conta'; return;
+  }
+
+  const { data, error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { name, last_name: last, company: co } }
+  });
+  btn.disabled = false; $('r-btn-txt').textContent='Criar minha conta';
+  if (error) { authMsg('error', error.message); return; }
+  authMsg('success', `Conta criada! Verifique seu e-mail para confirmar.`);
+  currentUser = data.user;
+  await delay(1200);
+  bootApp();
+}
+
+async function doLogout() {
+  if (sb) await sb.auth.signOut();
+  currentUser = null; checkouts = []; domains = [];
+  $('app').style.display='none';
+  $('auth-screen').style.display='flex';
+  switchTab('login'); closeDrop();
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+async function bootApp() {
+  $('auth-screen').style.display='none';
+  $('app').style.display='block';
+
+  const meta = currentUser?.user_metadata || {};
+  const name = meta.name || currentUser?.email?.split('@')[0] || 'Usuário';
+  const last = meta.last_name || '';
+  const initials = (name[0]||'?') + (last?last[0]:'');
+  $('u-av').textContent = initials.toUpperCase();
+  $('u-nm').textContent = name;
+  // profile
+  $('p-av-big').textContent = initials.toUpperCase();
+  $('p-fullname').textContent = name + (last ? ' '+last : '');
+  $('p-email').textContent = currentUser?.email || '';
+  $('p-name').value    = name;
+  $('p-last').value    = last;
+  $('p-email2').value  = currentUser?.email || '';
+  $('p-company').value = meta.company || '';
+
+  await loadCheckouts();
+  await loadDomains();
+  updateStats();
+}
+
+// ══════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════
+const titles = { dashboard:'Dashboard', z1:'Zero One Pay', pp:'Paradise Pags', ai:'Checkout por IA', checkouts:'Meus Checkouts', dominios:'Domínios', transacoes:'Transações', perfil:'Meu Perfil' };
+function go(id, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $('panel-'+id).classList.add('active');
+  $('page-title').textContent = titles[id]||id;
+  if (el) el.classList.add('active');
+  else document.querySelectorAll('.nav-item').forEach(n=>{ if(n.getAttribute('onclick')?.includes("'"+id+"'")) n.classList.add('active'); });
+  closeDrop();
+}
+
+// ══════════════════════════════════════════════════════
+//  DROPDOWN
+// ══════════════════════════════════════════════════════
+function toggleDrop() { $('u-drop').classList.toggle('show'); }
+function closeDrop()  { $('u-drop').classList.remove('show'); }
+document.addEventListener('click', e => { if(!e.target.closest('.user-menu')) closeDrop(); });
+
+// ══════════════════════════════════════════════════════
+//  TRANSACTIONS
+// ══════════════════════════════════════════════════════
+function addTx(gw, product, amount, cpfOrigem, status='pendente') {
+  const id = Math.random().toString(36).substr(2,10).toUpperCase();
+  txList.unshift({ id, gw, product, amount, cpfOrigem, status, time: new Date().toLocaleTimeString('pt-BR') });
+  $('d-tx').textContent = txList.length;
+  renderTx();
+}
+function renderTx() {
+  const b = $('tx-body');
+  if (!txList.length) { b.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3);">Nenhuma transação ainda.</td></tr>'; return; }
+  b.innerHTML = txList.map(t=>`<tr>
+    <td style="color:var(--text);font-size:.72rem;">${t.id}</td>
+    <td><span class="tx-gw ${t.gw}">${t.gw==='z1'?'Zero One':'Paradise'}</span></td>
+    <td style="color:var(--text)">${t.product}</td>
+    <td style="color:var(--green)">R$ ${(t.amount/100).toFixed(2).replace('.',',')}</td>
+    <td style="font-size:.7rem;color:var(--text3);">${t.cpfOrigem}</td>
+    <td><span class="tx-st ${t.status==='pago'?'ts-ok':'ts-pend'}">${t.status}</span></td>
+    <td>${t.time}</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  ZERO ONE PAY
+// ══════════════════════════════════════════════════════
+async function z1Submit() {
+  const tok=v('z1-tok'), off=v('z1-off'), amt=parseInt(v('z1-amt')||0), prod=v('z1-prod'), ttl=v('z1-ttl'), qty=parseInt(v('z1-qty')||1);
+  const name=v('z1-name'), email=v('z1-email'), tel=v('z1-tel');
+  const doc=v('z1-doc'), dfl=v('z1-dfl');
+  const finalDoc = doc || dfl || '00000000000';
+  const docSrc   = doc ? 'CPF do cliente' : dfl ? 'CPF padrão (vendedor)' : 'sem CPF';
+  if (!tok) { toast('Informe o API Token'); return; }
+  setBtnLoad('z1',true);
+  await delay(900+Math.random()*600);
+  const txid=rnd(16), pixCode=buildPix('12345678900',amt,txid);
+  const resp={id:txid,status:'waiting_payment',payment_method:'pix',amount:amt,pix:{qr_code:pixCode,expiration_date:new Date(Date.now()+86400000).toISOString()},customer:{name:name||'Anônimo',email:email||'sem-email@checkout.com',phone_number:tel||'00000000000',document:finalDoc,cpf_origem:docSrc},cart:[{product_hash:prod,title:ttl,price:amt,quantity:qty}],created_at:new Date().toISOString()};
+  showResp('z1',201,resp);
+  $('z1-qr').classList.add('show'); drawQR('z1-cv',pixCode);
+  const bc=$('z1-bc'); bc.textContent=pixCode.length>80?pixCode.substring(0,80)+'...':pixCode; bc.setAttribute('data-full',pixCode);
+  addTx('z1',ttl||'Produto',amt,docSrc);
+  setBtnLoad('z1',false);
+  toast(!doc&&dfl?`CPF padrão usado: ${dfl}`:'Cobrança Zero One Pay gerada!');
+}
+function z1Clear(){['z1-tok','z1-off','z1-amt','z1-prod','z1-ttl','z1-qty','z1-name','z1-email','z1-tel','z1-doc','z1-dfl'].forEach(i=>$(i)&&($(i).value=''));$('z1-resp').classList.remove('show');$('z1-qr').classList.remove('show');}
+
+// ══════════════════════════════════════════════════════
+//  PARADISE PAGS
+// ══════════════════════════════════════════════════════
+async function ppSubmit() {
+  const key=v('pp-key'),amt=parseInt(v('pp-amt')||0),desc=v('pp-desc'),ref=v('pp-ref');
+  const name=v('pp-name'),email=v('pp-email'),tel=v('pp-tel');
+  const doc=v('pp-doc'), dfl=v('pp-dfl'), utm=v('pp-utm');
+  const finalDoc = doc || dfl || '00000000000';
+  const docSrc   = doc ? 'CPF do cliente' : dfl ? 'CPF padrão (vendedor)' : 'sem CPF';
+  if (!key) { toast('Informe o X-API-Key'); return; }
+  setBtnLoad('pp',true);
+  await delay(800+Math.random()*500);
+  const txid='PP-'+rnd(12).toUpperCase(), pixCode=buildPix('joao@teste.com',amt,txid);
+  const resp={transaction_id:txid,status:'pending',payment_method:'pix',amount:amt,description:desc,reference:ref,pix:{qr_code:pixCode,expires_at:new Date(Date.now()+3600000).toISOString()},customer:{name:name||'Anônimo',email:email||'sem-email@checkout.com',phone:tel||'00000000000',document:finalDoc,cpf_origem:docSrc},tracking:utm?{utm_source:utm}:{},created_at:new Date().toISOString()};
+  showResp('pp',201,resp);
+  $('pp-qr').classList.add('show'); drawQR('pp-cv',pixCode);
+  const bc=$('pp-bc'); bc.textContent=pixCode.length>80?pixCode.substring(0,80)+'...':pixCode; bc.setAttribute('data-full',pixCode);
+  addTx('pp',desc||'Produto',amt,docSrc);
+  setBtnLoad('pp',false);
+  toast(!doc&&dfl?`CPF padrão usado: ${dfl}`:'Cobrança Paradise Pags gerada!');
+}
+function ppClear(){['pp-key','pp-amt','pp-desc','pp-ref','pp-name','pp-email','pp-tel','pp-doc','pp-dfl','pp-utm'].forEach(i=>$(i)&&($(i).value=''));$('pp-resp').classList.remove('show');$('pp-qr').classList.remove('show');}
+
+function setBtnLoad(pfx, on) {
+  const bi=$(pfx+'-bi'), bt=$(pfx+'-bt');
+  if(on){bi.innerHTML='<span class="spin"></span>';bt.textContent='Processando...';}
+  else{bi.textContent='⚡';bt.textContent='Gerar Cobrança PIX';}
+}
+
+// ══════════════════════════════════════════════════════
+//  SUPABASE — CHECKOUTS
+// ══════════════════════════════════════════════════════
+async function loadCheckouts() {
+  if (!sb || !currentUser) { renderCheckouts(); return; }
+  const { data } = await sb.from('checkouts').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false});
+  checkouts = data || [];
+  renderCheckouts();
+  updateStats();
+}
+
+async function saveCheckout(slug, title, html, domain, gwName) {
+  const uid = currentUser?.id || 'demo';
+  const record = { user_id: uid, slug, title, html, domain, gateway: gwName, created_at: new Date().toISOString() };
+  if (sb && currentUser?.id !== 'demo') {
+    const { data, error } = await sb.from('checkouts').insert([record]).select().single();
+    if (!error && data) { checkouts.unshift(data); }
+  } else {
+    checkouts.unshift({ id: rnd(8), ...record });
+  }
+  renderCheckouts();
+  updateStats();
+}
+
+async function deleteCheckout(id) {
+  if (!confirm('Excluir este checkout?')) return;
+  if (sb && currentUser?.id !== 'demo') await sb.from('checkouts').delete().eq('id', id);
+  checkouts = checkouts.filter(c => c.id !== id);
+  renderCheckouts(); updateStats(); toast('Checkout excluído.');
+}
+
+function renderCheckouts() {
+  const el = $('co-grid');
+  if (!checkouts.length) { el.innerHTML='<div class="co-empty">Nenhum checkout ainda. <a onclick="go(\'ai\',null)" style="color:var(--accent2);cursor:pointer;">Crie o primeiro →</a></div>'; return; }
+  el.innerHTML = checkouts.map(c => {
+    const url = c.domain ? `https://${c.domain}/checkout/${c.slug}` : `${PAYOS_BASE}/checkout/${c.slug}`;
+    const date = c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '';
+    return `<div class="co-card">
+      <div class="co-card-title">${c.title||c.slug}</div>
+      <div class="co-card-slug">${url}</div>
+      <div class="co-card-meta"><span>🔌 ${c.gateway||'—'}</span><span>📅 ${date}</span></div>
+      <div class="co-card-actions">
+        <button class="co-action" onclick="previewStored('${c.id}')">👁 Preview</button>
+        <button class="co-action" onclick="cpCoLink('${c.id}')">🔗 Copiar link</button>
+        <button class="co-action dl" onclick="dlStored('${c.id}')">⬇ Download</button>
+        <button class="co-action" onclick="cpIframeStored('${c.id}')">&#60;/&#62; iFrame</button>
+        <button class="co-action del" onclick="deleteCheckout('${c.id}')">✕ Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function coById(id) { return checkouts.find(c=>c.id==id)||{}; }
+function previewStored(id) { const c=coById(id); if(!c.html) return; const b=new Blob([c.html],{type:'text/html'}); window.open(URL.createObjectURL(b),'_blank'); }
+function dlStored(id) { const c=coById(id); if(!c.html) return; dlHTML(c.html, c.slug||'checkout'); }
+function cpCoLink(id) { const c=coById(id); const url=c.domain?`https://${c.domain}/checkout/${c.slug}`:`${PAYOS_BASE}/checkout/${c.slug}`; navigator.clipboard.writeText(url).then(()=>toast('Link copiado!')); }
+function cpIframeStored(id) { const c=coById(id); const url=c.domain?`https://${c.domain}/checkout/${c.slug}`:`${PAYOS_BASE}/checkout/${c.slug}`; const code=`<iframe src="${url}" width="100%" height="600" frameborder="0" style="border-radius:12px;border:none;" allow="payment"></iframe>`; navigator.clipboard.writeText(code).then(()=>toast('Código iFrame copiado!')); }
+
+// ══════════════════════════════════════════════════════
+//  SUPABASE — DOMAINS
+// ══════════════════════════════════════════════════════
+async function loadDomains() {
+  if (!sb || !currentUser) { renderDomains(); return; }
+  const { data } = await sb.from('domains').select('*').eq('user_id', currentUser.id);
+  domains = data || [];
+  renderDomains(); populateDomainSelect(); updateStats();
+}
+
+function renderDomains() {
+  const el = $('domains-list');
+  if (!domains.length) { el.innerHTML='<div class="co-empty">Nenhum domínio cadastrado. Adicione um para hospedar checkouts no seu próprio domínio.</div>'; return; }
+  el.innerHTML = domains.map(d=>`
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;margin-bottom:4px;">${d.domain}</div>
+          <div style="font-size:.7rem;color:var(--text3);">Tipo: ${d.type==='subdomain'?'Subdomínio':'Subpasta'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="domain-badge ${d.verified?'domain-verified':'domain-pending'}">${d.verified?'✓ Verificado':'⏳ Pendente'}</span>
+          ${!d.verified?`<button class="btn btn-g" style="font-size:.7rem;padding:5px 12px;" onclick="verifyDomain('${d.id}')">Verificar</button>`:''}
+          <button class="btn btn-g" style="font-size:.7rem;padding:5px 12px;color:var(--red);border-color:rgba(255,79,106,.2);" onclick="deleteDomain('${d.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function populateDomainSelect() {
+  const sel = $('ai-domain-sel');
+  sel.innerHTML = '<option value="">-- Selecione --</option>' + domains.map(d=>`<option value="${d.domain}">${d.domain}${d.verified?'':' (pendente)'}</option>`).join('');
+}
+
+function openAddDomain() { $('modal-domain').classList.add('show'); }
+function closeModal(id) { $(id).classList.remove('show'); }
+function updateDomainType() {
+  const t = $('dom-type').value;
+  $('dom-hint').innerHTML = t==='subdomain'
+    ? 'Configure o CNAME: <code style="color:var(--accent2)">checkout.meusite.com → payos-hosting.vercel.app</code>'
+    : 'Configure o CNAME: <code style="color:var(--accent2)">meusite.com → payos-hosting.vercel.app</code> e defina o path /checkout no rewrite do Vercel.';
+  $('dom-input').placeholder = t==='subdomain' ? 'checkout.meusite.com' : 'meusite.com/checkout';
+}
+
+async function addDomain() {
+  const domain = $('dom-input').value.trim();
+  const type   = $('dom-type').value;
+  if (!domain) { toast('Informe o domínio'); return; }
+  const token = 'payos-'+rnd(16);
+  const record = { user_id: currentUser?.id||'demo', domain, type, verified: false, verify_token: token, created_at: new Date().toISOString() };
+  if (sb && currentUser?.id !== 'demo') {
+    const { data } = await sb.from('domains').insert([record]).select().single();
+    if (data) domains.push(data);
+  } else { domains.push({ id: rnd(6), ...record }); }
+  renderDomains(); populateDomainSelect(); updateStats();
+  closeModal('modal-domain'); $('dom-input').value='';
+  toast('Domínio adicionado! Configure o DNS e clique em Verificar.');
+}
+
+async function verifyDomain(id) {
+  // In production, this would check DNS via backend
+  const d = domains.find(x=>x.id==id); if(!d) return;
+  if (sb && currentUser?.id !== 'demo') await sb.from('domains').update({verified:true}).eq('id',id);
+  d.verified = true;
+  renderDomains(); populateDomainSelect();
+  toast('Domínio verificado! ✓');
+}
+
+async function deleteDomain(id) {
+  if (!confirm('Remover este domínio?')) return;
+  if (sb && currentUser?.id !== 'demo') await sb.from('domains').delete().eq('id',id);
+  domains = domains.filter(d=>d.id!=id);
+  renderDomains(); populateDomainSelect(); updateStats(); toast('Domínio removido.');
+}
+
+// ══════════════════════════════════════════════════════
+//  AI CHECKOUT GENERATOR
+// ══════════════════════════════════════════════════════
+function selAiGw(gw) {
+  aiGw = gw;
+  $('ai-z1').className = 'gw-btn' + (gw==='z1'?' az1':'');
+  $('ai-pp').className  = 'gw-btn' + (gw==='pp'?' app':'');
+}
+function fillPrompt(el) { $('ai-prompt').value = el.textContent; }
+function setStatus(msg, show=true) { const el=$('ai-status'); el.style.display=show?'block':'none'; el.textContent=msg; }
+
+$('ai-host').addEventListener('change', function() {
+  $('ai-domain-wrap').style.display = this.value==='custom' ? 'block' : 'none';
+});
+
+async function genCheckout() {
+  const prompt   = $('ai-prompt').value.trim();
+  const defCpf   = $('ai-cpf').value.trim() || '000.000.000-00';
+  const defName  = $('ai-cname').value.trim() || 'Vendedor';
+  const hostType = $('ai-host').value;
+  const customDomain = hostType==='custom' ? $('ai-domain-sel').value : '';
+  let slug = $('ai-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-') || prompt.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').substring(0,30)+'-'+rnd(4);
+
+  if (!prompt) { toast('Descreva o checkout no campo acima'); return; }
+  if (!$('ai-cpf').value.trim()) {
+    if (!confirm('⚠️ Sem CPF padrão cadastrado.\nO comprovante PIX ficará sem CPF se o lead não preencher.\n\nContinuar mesmo assim?')) { $('ai-cpf').focus(); return; }
+  }
+
+  lastPrompt = prompt; lastSlug = slug;
+  const btn = $('ai-send'); btn.disabled = true; btn.textContent = '…';
+  setStatus('✦ IA gerando seu checkout...');
+
+  try {
+    const gwName = aiGw==='z1' ? 'Zero One Pay' : 'Paradise Pags';
+    const endpoint = aiGw==='z1'
+      ? 'https://api.zeroonepay.com.br/api/public/v1/transactions?api_token=API_TOKEN'
+      : 'https://multi.paradisepags.com/api/v1/transaction.php';
+    const headers = aiGw==='z1'
+      ? `'Content-Type': 'application/json'`
+      : `'X-API-Key': 'sk_SUA_CHAVE', 'Content-Type': 'application/json'`;
+    const bodyModel = aiGw==='z1'
+      ? `{ "amount": VALOR_CENTAVOS, "offer_hash": "OFFER_HASH", "payment_method": "pix", "customer": { "name": leadName||"${defName}", "email": leadEmail||"sem-email@checkout.com", "phone_number": leadPhone||"00000000000", "document": leadCpf||"${defCpf.replace(/\D/g,'')}" }, "cart": [{"product_hash":"HASH","title":"PRODUTO","price":VALOR,"quantity":1,"operation_type":1,"tangible":false}] }`
+      : `{ "amount": VALOR_CENTAVOS, "description": "PRODUTO", "reference": "REF-AUTO", "customer": { "name": leadName||"${defName}", "email": leadEmail||"sem-email@checkout.com", "phone": leadPhone||"00000000000", "document": leadCpf||"${defCpf.replace(/\D/g,'')}" } }`;
+
+    const sysPrompt = `Você é especialista em páginas de checkout de alta conversão para produtos digitais brasileiros.
+Gere APENAS código HTML completo (HTML+CSS+JS inline, arquivo único) para uma página de checkout PIX moderna, profissional e persuasiva.
+
+## REGRAS DE CAMPOS (todos opcionais):
+- TODOS os campos são opcionais — o lead pode pagar sem preencher nada
+- CPF fallback do vendedor: "${defCpf.replace(/\D/g,'')}" (nome: "${defName}")
+- Se lead não preencher CPF → usar "${defCpf.replace(/\D/g,'')}"
+- Se lead não preencher nome → usar "${defName}"
+- Se lead não preencher email → "sem-email@checkout.com"
+- Se lead não preencher telefone → "00000000000"
+- Mostrar aviso sutil abaixo do campo CPF: "CPF opcional — o seu CPF aparecerá no comprovante"
+
+## GATEWAY: ${gwName}
+- Endpoint: POST ${endpoint}
+- Headers: { ${headers} }
+- Body: ${bodyModel}
+- Após sucesso: mostrar QR Code PIX com qrcodejs (CDN), código copia-e-cola e countdown de expiração (15 min)
+- Em caso de erro da API: mostrar mensagem amigável e botão de tentar novamente
+
+## DESIGN:
+- Dark mode elegante, mobile-first, tipografia marcante
+- Seções: hero do produto, benefícios, depoimentos, garantia, formulário, CTA
+- Selos: PIX Banco Central, SSL, Compra 100% Segura
+- Cores de confiança e urgência (vagas limitadas ou timer)
+- Incluir: nome do produto, preço em destaque, parcelamento se mencionado
+
+Responda APENAS o HTML completo, sem markdown, sem explicações, sem \`\`\`.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:4000, system:sysPrompt, messages:[{role:'user',content:`Crie checkout para: ${prompt}\nGateway: ${gwName}\nCPF padrão: ${defCpf}\nNome padrão: ${defName}`}] })
+    });
+    const d = await res.json();
+    let html = d.content?.map(b=>b.text||'').join('') || '';
+    html = html.replace(/```html?/gi,'').replace(/```/g,'').trim();
+    lastHtml = html;
+
+    // Save to Supabase
+    const title = prompt.substring(0,60);
+    const domain = customDomain || null;
+    await saveCheckout(slug, title, html, domain, gwName);
+
+    // Preview
+    const pubUrl = domain ? `https://${domain}/checkout/${slug}` : `${PAYOS_BASE}/checkout/${slug}`;
+    renderPreview(html, pubUrl);
+    setStatus(`✦ Checkout salvo! Link: ${pubUrl}`);
+    toast('Checkout gerado e salvo!');
+  } catch(e) {
+    setStatus('Erro ao gerar. Verifique sua conexão.');
+    toast('Erro ao gerar checkout');
+  }
+  btn.disabled=false; btn.textContent='↑';
+}
+
+function renderPreview(html, url) {
+  const prev = $('co-preview'); prev.classList.add('show');
+  $('prev-url').textContent = url;
+  $('co-link-badge').textContent = '🔗 '+url;
+  const blob = new Blob([html],{type:'text/html'});
+  $('co-frame').src = URL.createObjectURL(blob);
+  $('iframe-code').classList.remove('show');
+}
+
+function showIframe() {
+  const url = $('prev-url').textContent;
+  const code = `<iframe\n  src="${url}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  style="border-radius:12px;border:none;"\n  allow="payment"\n></iframe>`;
+  const el = $('iframe-code'); el.textContent=code; el.classList.add('show');
+}
+function cpLink() { navigator.clipboard.writeText($('prev-url').textContent).then(()=>toast('Link copiado!')); }
+function dlCheckout() { if(lastHtml) dlHTML(lastHtml, lastSlug||'checkout'); }
+
+function dlHTML(html, name) {
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download=(name||'checkout')+'.html'; a.click();
+  toast('HTML baixado!');
+}
+
+// ══════════════════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════════════════
+async function saveProfile() {
+  const name = $('p-name').value.trim();
+  const last = $('p-last').value.trim();
+  const co   = $('p-company').value.trim();
+  if (!sb) { toast('Perfil atualizado (modo demo)'); return; }
+  const { error } = await sb.auth.updateUser({ data: { name, last_name: last, company: co } });
+  if (error) { toast('Erro: '+error.message); return; }
+  $('u-nm').textContent = name;
+  $('p-fullname').textContent = name + (last?' '+last:'');
+  $('u-av').textContent = ((name[0]||'?')+(last?last[0]:'')).toUpperCase();
+  $('p-av-big').textContent = $('u-av').textContent;
+  toast('Perfil atualizado!');
+}
+
+async function changePw() {
+  const pw1=$('p-pw1').value, pw2=$('p-pw2').value;
+  if (!pw1||!pw2){toast('Preencha ambas as senhas');return;}
+  if (pw1.length<8){toast('Mínimo 8 caracteres');return;}
+  if (pw1!==pw2){toast('Senhas não coincidem');return;}
+  if (!sb){toast('Senha alterada (modo demo)');return;}
+  const {error}=await sb.auth.updateUser({password:pw1});
+  if(error){toast('Erro: '+error.message);return;}
+  $('p-pw1').value='';$('p-pw2').value='';
+  toast('Senha alterada com sucesso!');
+}
+
+async function delAccount() {
+  if (!confirm('Excluir sua conta permanentemente?')) return;
+  // In production: call a Supabase Edge Function to delete user
+  toast('Conta excluída (implemente via Edge Function em produção)');
+  await doLogout();
+}
+
+// ══════════════════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════════════════
+function updateStats() {
+  $('d-co').textContent  = checkouts.length;
+  $('d-dom').textContent = domains.length;
+}
+
+// ══════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════
+const v = id => $(id)?.value?.trim() || '';
+const rnd = n => Math.random().toString(36).substr(2,n);
+
+// ══════════════════════════════════════════════════════
+//  AUTO SESSION CHECK (Supabase)
+// ══════════════════════════════════════════════════════
+(async () => {
+  if (!sb) return; // demo mode: show auth
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    bootApp();
+  }
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') doLogout();
+  });
+})();
+</script>
+</body>
+</html>
