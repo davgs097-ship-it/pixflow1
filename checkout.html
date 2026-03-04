@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carregando checkout...</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#08090d;color:#e8eaf5;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.loader{text-align:center;}
+.spin{width:40px;height:40px;border:3px solid rgba(79,110,247,.2);border-top-color:#4f6ef7;border-radius:50%;animation:rot .8s linear infinite;margin:0 auto 16px;}
+@keyframes rot{to{transform:rotate(360deg);}}
+.msg{font-size:.85rem;color:#7880a4;}
+.err{color:#ff4f6a;font-size:.85rem;margin-top:12px;}
+</style>
+</head>
+<body>
+<div class="loader">
+  <div class="spin"></div>
+  <div class="msg" id="msg">Carregando checkout...</div>
+  <div class="err" id="err"></div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://khrygwuykvojnlnaqmys.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_xjkKLDtgk20N-mLA6qPoRg_isKGZjVa';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function loadCheckout() {
+  // Get slug from URL path: /checkout/meu-slug
+  const slug = window.location.pathname.split('/checkout/')[1];
+
+  if (!slug) {
+    document.getElementById('err').textContent = 'Checkout não encontrado.';
+    document.getElementById('msg').textContent = '';
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('checkouts')
+    .select('html, title')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !data) {
+    document.getElementById('err').textContent = 'Checkout não encontrado ou expirado.';
+    document.getElementById('msg').textContent = '';
+    return;
+  }
+
+  // Replace entire page with checkout HTML
+  document.open();
+  document.write(data.html);
+  document.close();
+}
+
+loadCheckout();
+</script>
+</body>
+</html>
