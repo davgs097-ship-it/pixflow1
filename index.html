@@ -1182,7 +1182,7 @@ Gere APENAS código HTML completo (HTML+CSS+JS inline, arquivo único) para uma 
 
 Responda APENAS o HTML completo, sem markdown, sem explicações, sem \`\`\`.`;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/claude', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:4000, system:sysPrompt, messages:[{role:'user',content:`Crie checkout para: ${prompt}\nGateway: ${gwName}\nCPF padrão: ${defCpf}\nNome padrão: ${defName}`}] })
     });
