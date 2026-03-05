@@ -1192,7 +1192,7 @@ Responda APENAS o HTML completo, sem markdown, sem explicações, sem \`\`\`.`;
 
     const res = await fetch('/api/claude', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:4000, system:sysPrompt, messages:[{role:'user',content:`Crie checkout para: ${prompt}\nGateway: ${gwName}\nCPF padrão: ${defCpf}\nNome padrão: ${defName}`}] })
+      body: JSON.stringify({ model:'claude-3-5-sonnet-20241022', max_tokens:4000, system:sysPrompt, messages:[{role:'user',content:`Crie checkout para: ${prompt}\nGateway: ${gwName}\nCPF padrão: ${defCpf}\nNome padrão: ${defName}`}] })
     });
     const d = await res.json();
     let html = d.content?.map(b=>b.text||'').join('') || '';
