@@ -991,9 +991,17 @@ async function loadCheckouts() {
 async function saveCheckout(slug, title, html, domain, gwName) {
   const uid = currentUser?.id || 'demo';
   const record = { user_id: uid, slug, title, html, domain, gateway: gwName, created_at: new Date().toISOString() };
-  if (sb && currentUser?.id !== 'demo') {
+  console.log('Salvando checkout...', { slug, title, htmlLen: html?.length, uid });
+  if (sb && uid !== 'demo') {
     const { data, error } = await sb.from('checkouts').insert([record]).select().single();
-    if (!error && data) { checkouts.unshift(data); }
+    console.log('Supabase insert result:', { data, error });
+    if (error) {
+      console.error('Erro ao salvar:', error);
+      toast('Aviso: checkout gerado mas não salvo no banco: ' + error.message);
+      checkouts.unshift({ id: rnd(8), ...record });
+    } else if (data) {
+      checkouts.unshift(data);
+    }
   } else {
     checkouts.unshift({ id: rnd(8), ...record });
   }
