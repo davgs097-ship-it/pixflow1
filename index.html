@@ -445,6 +445,7 @@ canvas{display:block;}
             <div class="form-section">Autenticação</div>
             <div class="fg"><label>api_token</label><input class="input" id="z1-tok" type="password" placeholder="Seu API Token"><div class="input-hint">dashboard.zeroonepay.com.br → API</div></div>
             <div class="fg"><label>offer_hash</label><input class="input" id="z1-off" placeholder="ex: wtuk6qihsb_jgndu9xkee"></div>
+            <div class="fg"><label>product_hash</label><input class="input" id="z1-prod" placeholder="ex: wtuk6qihsb"><div class="input-hint">Hash do produto (sem o sufixo da oferta)</div></div>
 
             <div class="divider"></div>
             <div class="form-section">Cobrança</div>
@@ -955,12 +956,13 @@ setInterval(() => { if(currentUser) loadTransactions(); }, 30000);
 
 // ── ZERO ONE PAY ──
 async function z1Submit() {
-  const tok=v('z1-tok'), off=v('z1-off'), amt=parseInt(v('z1-amt')||0);
+  const tok=v('z1-tok'), off=v('z1-off'), prod=v('z1-prod'), amt=parseInt(v('z1-amt')||0);
   const name=v('z1-name'), email=v('z1-email'), tel=v('z1-tel');
   const doc=v('z1-doc'), dfl=v('z1-dfl');
   const finalDoc = doc || dfl || '00000000000';
   if(!tok){toast('Informe o api_token');return;}
   if(!off){toast('Informe o offer_hash');return;}
+  if(!prod){toast('Informe o product_hash');return;}
   if(!amt){toast('Informe o amount');return;}
   const bi=$('z1-bi'),bt=$('z1-bt'); bi.innerHTML='<span class="spin"></span>'; bt.textContent='Gerando...';
 
@@ -972,6 +974,7 @@ async function z1Submit() {
         api_token: tok,
         amount: amt,
         offer_hash: off,
+        product_hash: prod,
         webhook_url: getWebhookUrl(),
         customer: {
           name: name||'Anônimo',
