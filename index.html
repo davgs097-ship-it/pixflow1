@@ -1302,9 +1302,7 @@ function PayOS_preview() {
   }
 }
 
-// ── CHAT IA ──
-const chatHistory = [];
-
+// ── CHAT / INTEGRADOR AUTOMÁTICO ──
 function chatKey(e) {
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); chatSend(); }
 }
@@ -1330,25 +1328,8 @@ function addChatMsg(role, content, downloadHtml) {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-function addTyping() {
-  const msgs = $('chat-messages');
-  const div = document.createElement('div');
-  div.className = 'chat-msg'; div.id = 'chat-typing';
-  div.innerHTML = `<div class="chat-avatar ai">◎</div><div class="chat-bubble ai"><div class="chat-typing"><span></span><span></span><span></span></div></div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function removeTyping() {
-  const t = $('chat-typing');
-  if(t) t.remove();
-}
-
 function formatChatMsg(text) {
-  // formata blocos de código
   return text
-    .replace(/```html([\s\S]*?)```/g, '<pre>$1</pre>')
-    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--accent)">$1</strong>')
     .replace(/\n/g, '<br>');
 }
@@ -1363,9 +1344,65 @@ function dlHtml(el) {
 }
 
 function clearChat() {
-  chatHistory.length = 0;
   $('chat-messages').innerHTML = '';
-  addChatMsg('ai', 'Olá! Cole o HTML do seu site aqui e eu integro o PIX automaticamente. Você também pode me perguntar qualquer coisa sobre a integração. 🚀');
+  addChatMsg('ai', 'Olá! 👋 Cole o HTML do seu site aqui e eu integro o PIX automaticamente.\n\nO sistema detecta o botão de pagamento e injeta o script sozinho. 🚀');
+}
+
+function injectPayOS(html) {
+  const userId = currentUser?.id || '';
+  const snippet = `\n<!-- PayOS PIX -->\n<script>\n  window.PayOSConfig = { userId: '${userId}' }\n<\/script>\n<script src="https://pixflow1.vercel.app/pix.js"><\/script>`;
+
+  // 1. injeta o script antes do </body>
+  let result = html;
+  if(result.includes('</body>')) {
+    result = result.replace('</body>', snippet + '\n</body>');
+  } else {
+    result = result + snippet;
+  }
+
+  // 2. detecta botões de pagamento e troca o onclick
+  const btnPatterns = [
+    // onclick="redirecionarUtmsCk()" ou onclick="..." qualquer função
+    /(<button[^>]*)(onclick="[^"]*")/gi,
+    // onclick='...'
+    /(<button[^>]*)(onclick='[^']*')/gi,
+  ];
+
+  // palavras que indicam botão de pagamento
+  const payWords = /pagar|comprar|finalizar|checkout|payment|pay|buy|adquirir|contratar|assinar|continuar|confirmar/i;
+
+  // substitui apenas botões que contém palavras de pagamento no texto ou classe
+  result = result.replace(/<button[^>]*>[\s\S]*?<\/button>/gi, (match) => {
+    if(payWords.test(match)) {
+      return match
+        .replace(/onclick="[^"]*"/i, 'onclick="PayOS.pagar()"')
+        .replace(/onclick='[^']*'/i, "onclick=\"PayOS.pagar()\"")
+        // se não tiver onclick, adiciona
+        .replace(/(<button)([^>]*>)/i, (m, tag, rest) => {
+          if(!/onclick/i.test(rest)) return `${tag} onclick="PayOS.pagar()"${rest}`;
+          return m;
+        });
+    }
+    return match;
+  });
+
+  // 3. detecta links/anchors de pagamento
+  result = result.replace(/<a[^>]*>[\s\S]*?<\/a>/gi, (match) => {
+    if(payWords.test(match)) {
+      return match
+        .replace(/href="[^"]*"/i, 'href="javascript:void(0)"')
+        .replace(/href='[^']*'/i, 'href="javascript:void(0)"')
+        .replace(/onclick="[^"]*"/i, 'onclick="PayOS.pagar()"')
+        .replace(/onclick='[^']*'/i, "onclick=\"PayOS.pagar()\"")
+        .replace(/(<a)([^>]*>)/i, (m, tag, rest) => {
+          if(!/onclick/i.test(rest)) return `${tag} onclick="PayOS.pagar()"${rest}`;
+          return m;
+        });
+    }
+    return match;
+  });
+
+  return result;
 }
 
 async function chatSend() {
@@ -1377,62 +1414,56 @@ async function chatSend() {
   input.style.height = 'auto';
   addChatMsg('user', msg);
 
-  const btn = $('chat-send-btn');
-  btn.disabled = true;
-  $('chat-send-icon').innerHTML = '<span class="spin"></span>';
-  addTyping();
+  // detecta se é HTML
+  const isHtml = /<html|<!DOCTYPE|<body|<div|<button/i.test(msg);
 
-  // contexto do usuário
-  const userId = currentUser?.id || '';
-  const systemPrompt = `Você é um assistente especialista em integração PIX do PayOS. 
-Seu trabalho é ajudar vendedores a integrar o sistema de pagamento PIX nos seus sites.
+  if(isHtml) {
+    // pequeno delay para parecer que está processando
+    setTimeout(() => {
+      try {
+        const integrated = injectPayOS(msg);
 
-CONTEXTO DO USUÁRIO:
-- User ID PayOS: ${userId}
-- Script PayOS: https://pixflow1.vercel.app/pix.js
-- Para integrar: adicionar <scr' + 'ipt>window.PayOSConfig={userId:'${userId}'}</scr' + 'ipt> e <scr' + 'ipt src="https://pixflow1.vercel.app/pix.js"></scr' + 'ipt> antes do </body>
-- Trocar o onclick do botão de pagamento para: onclick="PayOS.pagar()"
+        // conta quantos botões foram alterados
+        const btnCount = (msg.match(/<button[^>]*>[\s\S]*?<\/button>/gi)||[])
+          .filter(b => /pagar|comprar|finalizar|checkout|payment|pay|buy|adquirir|contratar|assinar|continuar|confirmar/i.test(b)).length;
 
-REGRAS:
-1. Se o usuário colar um HTML, integre o PIX automaticamente e retorne o HTML completo modificado dentro de um bloco \`\`\`html ... \`\`\`
-2. Detecte o botão de pagamento pelo texto (Pagar, Comprar, Finalizar, etc) ou pelo onclick
-3. Sempre explique o que foi alterado de forma simples
-4. Responda sempre em português
-5. Se não tiver HTML, responda dúvidas sobre a integração normalmente
-6. Mantenha TODO o HTML original intacto, apenas adicione o necessário`;
+        const linkCount = (msg.match(/<a[^>]*>[\s\S]*?<\/a>/gi)||[])
+          .filter(a => /pagar|comprar|finalizar|checkout|payment|pay|buy|adquirir|contratar|assinar|continuar|confirmar/i.test(a)).length;
 
-  chatHistory.push({ role: 'user', content: msg });
+        const total = btnCount + linkCount;
 
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        system: systemPrompt,
-        messages: chatHistory.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.content }))
-      })
-    });
+        addChatMsg('ai',
+          `✅ **PIX integrado com sucesso!**\n\n` +
+          `- Script PayOS injetado antes do \`</body>\`\n` +
+          `- **${total} botão(ões) de pagamento** detectado(s) e alterado(s)\n` +
+          `- Seu User ID já está configurado automaticamente\n\n` +
+          `Baixe o arquivo e hospede onde quiser! 👇`,
+          integrated
+        );
+      } catch(e) {
+        addChatMsg('ai', '⚠️ Erro ao processar o HTML. Tente novamente.');
+      }
+    }, 600);
 
-    const data = await resp.json();
-    const reply = data.content?.[0]?.text || 'Erro ao obter resposta.';
+  } else {
+    // responde dúvidas comuns sem IA
+    const lower = msg.toLowerCase();
+    let reply = '';
 
-    chatHistory.push({ role: 'ai', content: reply });
-    removeTyping();
+    if(/como|integrar|instalar|usar/i.test(lower)) {
+      reply = `Para integrar o PIX no seu site:\n\n1. Cole o HTML completo do seu site aqui\n2. O sistema detecta o botão automaticamente\n3. Baixe o arquivo pronto\n4. Hospede onde quiser\n\nSimples assim! 🚀`;
+    } else if(/webhook|notificaç/i.test(lower)) {
+      reply = `Sua URL de webhook é:\n\`https://khrygwuykvojnlnaqmys.supabase.co/functions/v1/webhook?user=${currentUser?.id}\`\n\nCadastre ela no seu gateway para receber notificações de pagamento.`;
+    } else if(/valor|preço|mudar|alterar/i.test(lower)) {
+      reply = `Para alterar o valor do PIX, vá em **Integrador PIX** no menu lateral, mude o campo **amount** e salve. A mudança entra em vigor imediatamente em todos os sites integrados.`;
+    } else if(/paradise|pp/i.test(lower)) {
+      reply = `O Paradise Pags está configurado como seu gateway padrão. Você pode testar na aba **Paradise Pags** no menu lateral.`;
+    } else {
+      reply = `Cole o HTML completo do seu site aqui e eu integro o PIX automaticamente! 🚀\n\nOu pergunte sobre: **webhook**, **valor**, **gateway**, **como integrar**.`;
+    }
 
-    // extrai HTML integrado se existir
-    const htmlMatch = reply.match(/```html([\s\S]*?)```/);
-    const cleanReply = reply.replace(/```html[\s\S]*?```/, '✅ HTML integrado gerado com sucesso! Clique em **Baixar HTML integrado** para salvar.');
-    addChatMsg('ai', cleanReply, htmlMatch ? htmlMatch[1].trim() : null);
-
-  } catch(e) {
-    removeTyping();
-    addChatMsg('ai', '⚠️ Erro de conexão. Tente novamente.');
+    setTimeout(() => addChatMsg('ai', reply), 300);
   }
-
-  btn.disabled = false;
-  $('chat-send-icon').innerHTML = '⚡';
 }
 
 // ── MOBILE ──
