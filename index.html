@@ -905,9 +905,10 @@ function showApp() {
   $('p-last').value=userMeta?.last_name||currentUser?.user_metadata?.last_name||'';
   $('p-email2').value=currentUser?.email||'';
   $('p-company').value=userMeta?.company||currentUser?.user_metadata?.company||'';
-  genSecret();
   showWebhookUrl();
   loadTransactions();
+  // Carrega snippet do integrador se já tiver config salva
+  loadIntegration();
 }
 
 // Check session on load
@@ -923,7 +924,7 @@ window.addEventListener('load', async () => {
 });
 
 // ── NAV ──
-const titles={dashboard:'Dashboard',z1:'Zero One Pay',pp:'Paradise Pags',webhooks:'Webhooks',transacoes:'Transações',perfil:'Perfil'};
+const titles={dashboard:'Dashboard',z1:'Zero One Pay',pp:'Paradise Pags',webhooks:'Webhooks',transacoes:'Transações',perfil:'Perfil',integrador:'Integrador PIX'};
 function go(id,el) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1159,6 +1160,25 @@ async function changePassword() {
   toast('Senha atualizada!');
 }
 
+async function loadIntegration() {
+  if(!currentUser) return;
+  try {
+    const { data } = await sb.from('integrations').select('*').eq('user_id', currentUser.id).single();
+    if(!data) return;
+    // preenche os campos
+    if($('int-gw')) $('int-gw').value = data.gateway || 'pp';
+    if($('int-key')) $('int-key').value = data.api_key || '';
+    if($('int-amt')) $('int-amt').value = data.amount || '';
+    if($('int-desc')) $('int-desc').value = data.description || '';
+    if($('int-doc')) $('int-doc').value = data.seller_doc || '';
+    if($('int-color')) $('int-color').value = data.accent_color || '#00e5ff';
+    if($('int-off')) $('int-off').value = data.offer_hash || '';
+    if($('int-prod')) $('int-prod').value = data.product_hash || '';
+    toggleIntGw();
+    showIntSnippet();
+  } catch(e) { /* sem config ainda */ }
+}
+
 // ── INTEGRADOR PIX ──
 function toggleIntGw() {
   const gw = v('int-gw');
@@ -1193,8 +1213,9 @@ async function saveIntegration() {
       updated_at: new Date().toISOString()
     };
 
-    // upsert — salva ou atualiza
-    const { error } = await sb.from('integrations').upsert(row, { onConflict: 'user_id' });
+    // deleta registro antigo e insere novo (evita problema de constraint)
+    await sb.from('integrations').delete().eq('user_id', currentUser.id);
+    const { error } = await sb.from('integrations').insert(row);
     if(error) throw error;
 
     toast('✓ Configuração salva!');
