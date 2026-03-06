@@ -886,6 +886,7 @@ function go(id,el) {
   $('page-title').textContent=titles[id]||id;
   if(el)el.classList.add('active');
   else document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
+  if(id==='webhooks') showWebhookUrl();
   closeDrop();
 }
 function toggleDrop(){$('u-drop').classList.toggle('show');}
