@@ -130,6 +130,13 @@
     return 'R$ ' + (cents / 100).toFixed(2).replace('.', ',');
   }
 
+  // ── CLOSE MODAL ───────────────────────────────────────
+  function closeModal() {
+    clearInterval(timerIv);
+    const el = document.getElementById('payos-overlay');
+    if (el) el.remove();
+  }
+
   // ── OPEN MODAL ────────────────────────────────────────
   function openModal() {
     closeModal();
@@ -254,9 +261,7 @@
     },
 
     fechar: function () {
-      clearInterval(timerIv);
-      const el = document.getElementById('payos-overlay');
-      if (el) el.remove();
+      closeModal();
     },
 
     _copiar: function () {
