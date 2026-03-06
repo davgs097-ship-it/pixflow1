@@ -245,7 +245,63 @@ canvas{display:block;}
 .profile-avatar{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--green));display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:#000;flex-shrink:0;}
 .plan-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.65rem;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--accent);letter-spacing:.5px;}
 
-@media(max-width:900px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;}.stats{grid-template-columns:1fr 1fr;}.quick-grid{grid-template-columns:1fr 1fr;}.content{padding:18px 16px;}}
+/* MOB NAV BAR */
+.mob-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--bg2);border-top:1px solid var(--border);padding:8px 4px calc(8px + env(safe-area-inset-bottom));}
+.mob-nav{display:flex;align-items:center;justify-content:space-around;}
+.mob-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;transition:all .15s;border:none;background:none;color:var(--text2);min-width:48px;}
+.mob-item.active{color:var(--accent);}
+.mob-item-icon{font-size:1.1rem;line-height:1;}
+.mob-item-label{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.5px;}
+/* Drawer (more menu) */
+.mob-drawer{position:fixed;inset:0;z-index:300;display:none;}
+.mob-drawer.show{display:block;}
+.mob-drawer-bg{position:absolute;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);}
+.mob-drawer-panel{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:16px 16px calc(28px + env(safe-area-inset-bottom));animation:slideUp .25s cubic-bezier(.34,1.56,.64,1);}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:none;}}
+.mob-drawer-handle{width:36px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 18px;}
+.mob-drawer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mob-drawer-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+.mob-drawer-item:active{background:var(--bg4);}
+.mob-drawer-icon{font-size:1rem;}
+.mob-drawer-label{font-size:.72rem;color:var(--text2);}
+/* Hamburger */
+.mob-menu-btn{display:none;background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer;padding:4px 8px;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;backdrop-filter:blur(2px);}
+
+@media(max-width:1024px){
+  :root{--sidebar-w:210px;}
+  .stats{grid-template-columns:1fr 1fr;}
+}
+
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;bottom:0;left:0;width:270px !important;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:100;}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-overlay{display:block;}
+  .main{margin-left:0 !important;}
+  .topbar{padding:12px 16px;}
+  .topbar .api-badge{display:none;}
+  .u-name{display:none;}
+  .mob-menu-btn{display:flex !important;}
+  .mob-bar{display:block;}
+  .content{padding:16px 14px 90px;}
+  .stats{grid-template-columns:1fr 1fr;gap:10px;}
+  .stat-card{padding:14px 12px;}
+  .stat-val{font-size:1.4rem;}
+  .quick-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  #panel-z1>div,#panel-pp>div,#panel-webhooks>div,#panel-perfil>div{grid-template-columns:1fr !important;}
+  .fg-row,.fg-row3{grid-template-columns:1fr !important;}
+  .tx-table th:nth-child(1),.tx-table td:nth-child(1),.tx-table th:nth-child(5),.tx-table td:nth-child(5){display:none;}
+  .page-title{font-size:.9rem;}
+}
+
+@media(max-width:420px){
+  .quick-grid{grid-template-columns:1fr;}
+  .stats{grid-template-columns:1fr 1fr;gap:8px;}
+  .content{padding:12px 10px 90px;}
+  .card{padding:16px 14px;}
+  .auth-row{grid-template-columns:1fr;}
+  .auth-body{padding:20px 18px;}
+}
 </style>
 </head>
 <body>
@@ -326,7 +382,10 @@ canvas{display:block;}
 
 <div class="main">
   <div class="topbar">
-    <div class="page-title" id="page-title">Dashboard</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="page-title" id="page-title">Dashboard</div>
+    </div>
     <div class="topbar-right">
       <div class="api-badge"><span class="api-dot"></span><span id="conn-label">Conectado</span></div>
       <div class="user-menu" onclick="toggleDrop()">
@@ -610,6 +669,50 @@ canvas{display:block;}
 
   </div><!-- content -->
 </div><!-- main -->
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()" style="display:none;"></div>
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mob-bar">
+  <div class="mob-nav">
+    <button class="mob-item active" id="mob-dashboard" onclick="go('dashboard',null);setMobActive('mob-dashboard')">
+      <span class="mob-item-icon">◈</span><span class="mob-item-label">Dashboard</span>
+    </button>
+    <button class="mob-item" id="mob-z1" onclick="go('z1',null);setMobActive('mob-z1')">
+      <span class="mob-item-icon" style="color:var(--z1)">◉</span><span class="mob-item-label">Zero One</span>
+    </button>
+    <button class="mob-item" id="mob-pp" onclick="go('pp',null);setMobActive('mob-pp')">
+      <span class="mob-item-icon" style="color:var(--pp)">◉</span><span class="mob-item-label">Paradise</span>
+    </button>
+    <button class="mob-item" id="mob-webhooks" onclick="go('webhooks',null);setMobActive('mob-webhooks')">
+      <span class="mob-item-icon">⚡</span><span class="mob-item-label">Webhook</span>
+    </button>
+    <button class="mob-item" id="mob-more" onclick="openMobDrawer()">
+      <span class="mob-item-icon">⋯</span><span class="mob-item-label">Mais</span>
+    </button>
+  </div>
+</div>
+
+<!-- MOBILE DRAWER -->
+<div class="mob-drawer" id="mob-drawer">
+  <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
+  <div class="mob-drawer-panel">
+    <div class="mob-drawer-handle"></div>
+    <div class="mob-drawer-grid">
+      <div class="mob-drawer-item" onclick="go('transacoes',null);setMobActive(null);closeMobDrawer()">
+        <span class="mob-drawer-icon">⇄</span><span class="mob-drawer-label">Transações</span>
+      </div>
+      <div class="mob-drawer-item" onclick="go('perfil',null);setMobActive(null);closeMobDrawer()">
+        <span class="mob-drawer-icon">▣</span><span class="mob-drawer-label">Perfil</span>
+      </div>
+      <div class="mob-drawer-item" onclick="doLogout();closeMobDrawer()">
+        <span class="mob-drawer-icon">⎋</span><span class="mob-drawer-label" style="color:var(--red)">Sair</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- app -->
 
 <div class="toast" id="toast"><span class="toast-dot"></span><span id="t-msg"></span></div>
@@ -836,21 +939,41 @@ function cpWhUrl() {
 
 async function loadTransactions() {
   if (!sb || !currentUser) return;
-  const { data } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+  const { data } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(50);
   const el = $('wh-tx-log');
   if (!data?.length) { el.innerHTML = '<div class="wh-empty">Nenhum pagamento recebido ainda.</div>'; return; }
-  el.innerHTML = data.map(t => `
-    <div class="wh-log-entry">
-      <span class="wh-log-time">${new Date(t.created_at).toLocaleTimeString('pt-BR')}</span>
-      <span class="wh-log-badge ${t.status==='pago'?'wh-ok':'wh-pend'}">${t.status.toUpperCase()}</span>
-      <span class="wh-log-msg">${t.gateway} · R$ ${((t.amount||0)/100).toFixed(2)} · ${t.customer_name||'—'}</span>
-    </div>
-  `).join('');
+
+  el.innerHTML = data.map(t => {
+    const isPago = t.status === 'pago' || t.status === 'paid' || t.status === 'approved';
+    const badgeClass = isPago ? 'wh-ok' : 'wh-pend';
+    const badgeText = isPago ? 'PAGO' : 'PENDENTE';
+    const valor = t.amount ? 'R$ '+((t.amount)/100).toFixed(2).replace('.',',') : '—';
+    const data_hora = new Date(t.created_at).toLocaleString('pt-BR');
+    return `
+    <div class="wh-log-entry" style="flex-direction:column;gap:4px;padding:12px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;width:100%;">
+        <span class="wh-log-badge ${badgeClass}">${badgeText}</span>
+        <span style="color:var(--text);font-weight:600;">${valor}</span>
+        <span style="color:var(--text2);font-size:.65rem;margin-left:auto;">${data_hora}</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:.65rem;color:var(--text2);">
+        <span>👤 ${t.customer_name||'—'}</span>
+        <span>📦 ${t.product||'—'}</span>
+        <span style="color:${t.gateway==='zero_one_pay'?'var(--z1)':'var(--pp)'}">◉ ${t.gateway==='zero_one_pay'?'Zero One':'Paradise'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
   // update stats
+  const pagas = data.filter(t => t.status==='pago'||t.status==='paid'||t.status==='approved');
   $('d-tx').textContent = data.length;
-  const vol = data.reduce((s,t)=>s+(t.amount||0),0);
+  const vol = pagas.reduce((s,t)=>s+(t.amount||0),0);
   $('d-vol').textContent = 'R$ '+(vol/100).toFixed(2).replace('.',',');
+  $('d-wh').textContent = pagas.length;
 }
+
+// Auto-refresh a cada 30s
+setInterval(() => { if(currentUser) loadTransactions(); }, 30000);
 
 // ── ZERO ONE PAY ──
 async function z1Submit() {
@@ -917,6 +1040,24 @@ async function changePassword() {
   if(sb){await sb.auth.updateUser({password:np});}
   $('p-np').value='';$('p-np2').value='';
   toast('Senha atualizada!');
+}
+
+// ── MOBILE ──
+function toggleSidebar() {
+  const s=document.querySelector('.sidebar'),o=$('sidebar-overlay');
+  const open=s.classList.toggle('open');
+  o.style.display=open?'block':'none';
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  $('sidebar-overlay').style.display='none';
+}
+function openMobDrawer(){$('mob-drawer').classList.add('show');}
+function closeMobDrawer(){$('mob-drawer').classList.remove('show');}
+function setMobActive(id) {
+  document.querySelectorAll('.mob-item').forEach(el=>el.classList.remove('active'));
+  if(id){const el=$(id);if(el)el.classList.add('active');}
+  closeSidebar();
 }
 </script>
 </body>
