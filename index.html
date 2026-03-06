@@ -981,19 +981,59 @@ async function z1Submit() {
   const tok=v('z1-tok'),off=v('z1-off'),amt=parseInt(v('z1-amt')||0),prod=v('z1-prod'),ttl=v('z1-ttl'),qty=parseInt(v('z1-qty')||1);
   const name=v('z1-name'),email=v('z1-email'),tel=v('z1-tel'),doc=v('z1-doc'),dfl=v('z1-dfl');
   const finalDoc=doc||dfl||'00000000000';
-  const docSrc=doc?'CPF do cliente':dfl?'CPF padrão (vendedor)':'sem CPF';
   if(!tok){toast('Informe o API Token');return;}
+  if(!off){toast('Informe o Offer Hash');return;}
+  if(!amt){toast('Informe o valor');return;}
   const bi=$('z1-bi'),bt=$('z1-bt'); bi.innerHTML='<span class="spin"></span>'; bt.textContent='Gerando...';
-  await delay(800+Math.random()*500);
-  const txid=rnd(16),pixCode=buildPix('12345678900',amt/100,txid);
-  const resp={id:txid,status:'waiting_payment',payment_method:'pix',amount:amt,pix:{qr_code:pixCode,expiration_date:new Date(Date.now()+900000).toISOString()},customer:{name:name||'Anônimo',email:email||'sem-email@checkout.com',phone_number:tel||'00000000000',document:finalDoc,cpf_origem:docSrc},cart:[{product_hash:prod,title:ttl,price:amt,quantity:qty}],webhook_url:v('z1-wh-url')||null,created_at:new Date().toISOString()};
-  showResp('z1',201,resp);
-  $('z1-qr').classList.add('show'); drawQR('z1-cv',pixCode);
-  const bc=$('z1-bc'); bc.textContent=pixCode.length>80?pixCode.substring(0,80)+'...':pixCode; bc.setAttribute('data-full',pixCode);
-  startTimer('z1-timer',15);
-  addTx('z1',ttl||'Produto',amt,docSrc);
+
+  try {
+    const webhookUrl = getWebhookUrl();
+    const resp = await fetch('https://khrygwuykvojnlnaqmys.supabase.co/functions/v1/pix-z1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_token: tok,
+        amount: amt,
+        offer_hash: off,
+        webhook_url: webhookUrl,
+        customer: {
+          name: name||'Anônimo',
+          email: email||'sem-email@checkout.com',
+          phone_number: tel||'00000000000',
+          document: finalDoc
+        },
+        cart: [{
+          product_hash: prod||off,
+          title: ttl||'Produto',
+          price: amt,
+          quantity: qty,
+          operation_type: 1,
+          tangible: false
+        }]
+      })
+    });
+
+    const data = await resp.json();
+    showResp('z1', resp.status, data);
+
+    if (resp.ok && data.pix?.qr_code) {
+      $('z1-qr').classList.add('show');
+      drawQR('z1-cv', data.pix.qr_code);
+      const bc=$('z1-bc');
+      bc.textContent=data.pix.qr_code.length>80?data.pix.qr_code.substring(0,80)+'...':data.pix.qr_code;
+      bc.setAttribute('data-full', data.pix.qr_code);
+      startTimer('z1-timer', 15);
+      addTx('z1', ttl||'Produto', amt, doc?'CPF do cliente':dfl?'CPF padrão':'sem CPF');
+      toast('✓ PIX real gerado!');
+    } else {
+      toast('Erro: '+(data.message||data.error||'verifique o response'));
+    }
+  } catch(e) {
+    toast('Erro de conexão: '+e.message);
+    showResp('z1', 500, { error: e.message });
+  }
+
   bi.innerHTML='⚡'; bt.textContent='Gerar cobrança PIX';
-  toast(!doc&&dfl?`✓ CPF padrão usado`:'✓ Cobrança PIX gerada!');
 }
 
 function z1Clear(){['z1-tok','z1-off','z1-amt','z1-prod','z1-ttl','z1-qty','z1-name','z1-email','z1-tel','z1-doc','z1-dfl','z1-wh-url'].forEach(i=>$(i)&&($(i).value=''));$('z1-resp').classList.remove('show');$('z1-qr').classList.remove('show');}
@@ -1003,19 +1043,54 @@ async function ppSubmit() {
   const key=v('pp-key'),amt=parseInt(v('pp-amt')||0),desc=v('pp-desc'),ref=v('pp-ref'),utm=v('pp-utm');
   const name=v('pp-name'),email=v('pp-email'),tel=v('pp-tel'),doc=v('pp-doc'),dfl=v('pp-dfl');
   const finalDoc=doc||dfl||'00000000000';
-  const docSrc=doc?'CPF do cliente':dfl?'CPF padrão (vendedor)':'sem CPF';
   if(!key){toast('Informe o X-API-Key');return;}
+  if(!amt){toast('Informe o valor');return;}
+  if(!desc){toast('Informe a descrição');return;}
   const bi=$('pp-bi'),bt=$('pp-bt'); bi.innerHTML='<span class="spin"></span>'; bt.textContent='Gerando...';
-  await delay(700+Math.random()*400);
-  const txid='PP-'+rnd(12).toUpperCase(),pixCode=buildPix('joao@teste.com',amt/100,txid);
-  const resp={transaction_id:txid,status:'pending',payment_method:'pix',amount:amt,description:desc,reference:ref,pix:{qr_code:pixCode,expires_at:new Date(Date.now()+900000).toISOString()},customer:{name:name||'Anônimo',email:email||'sem-email@checkout.com',phone:tel||'00000000000',document:finalDoc,cpf_origem:docSrc},tracking:utm?{utm_source:utm}:{},webhook_url:v('pp-wh-url')||null,created_at:new Date().toISOString()};
-  showResp('pp',201,resp);
-  $('pp-qr').classList.add('show'); drawQR('pp-cv',pixCode);
-  const bc=$('pp-bc'); bc.textContent=pixCode.length>80?pixCode.substring(0,80)+'...':pixCode; bc.setAttribute('data-full',pixCode);
-  startTimer('pp-timer',15);
-  addTx('pp',desc||'Produto',amt,docSrc);
+
+  try {
+    const webhookUrl = getWebhookUrl();
+    const reference = ref || 'REF-'+rnd(10).toUpperCase();
+    const resp = await fetch('https://khrygwuykvojnlnaqmys.supabase.co/functions/v1/pix-pp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: key,
+        amount: amt,
+        description: desc,
+        reference,
+        postback_url: webhookUrl,
+        customer: {
+          name: name||'Anônimo',
+          email: email||'sem-email@checkout.com',
+          phone: tel||'00000000000',
+          document: finalDoc
+        },
+        utm: utm ? { utm_source: utm } : undefined
+      })
+    });
+
+    const data = await resp.json();
+    showResp('pp', resp.status, data);
+
+    if (resp.ok && data.qr_code) {
+      $('pp-qr').classList.add('show');
+      drawQR('pp-cv', data.qr_code);
+      const bc=$('pp-bc');
+      bc.textContent=data.qr_code.length>80?data.qr_code.substring(0,80)+'...':data.qr_code;
+      bc.setAttribute('data-full', data.qr_code);
+      startTimer('pp-timer', 15);
+      addTx('pp', desc, amt, doc?'CPF do cliente':dfl?'CPF padrão':'sem CPF');
+      toast('✓ PIX real gerado!');
+    } else {
+      toast('Erro: '+(data.message||data.error||'verifique o response'));
+    }
+  } catch(e) {
+    toast('Erro de conexão: '+e.message);
+    showResp('pp', 500, { error: e.message });
+  }
+
   bi.innerHTML='⚡'; bt.textContent='Gerar cobrança PIX';
-  toast(!doc&&dfl?`✓ CPF padrão usado`:'✓ Cobrança PIX gerada!');
 }
 
 function ppClear(){['pp-key','pp-amt','pp-desc','pp-ref','pp-name','pp-email','pp-tel','pp-doc','pp-dfl','pp-utm','pp-wh-url'].forEach(i=>$(i)&&($(i).value=''));$('pp-resp').classList.remove('show');$('pp-qr').classList.remove('show');}
