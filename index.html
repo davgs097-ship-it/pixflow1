@@ -369,6 +369,10 @@ canvas{display:block;}
     <a class="nav-item" onclick="go('pp',this)"><span class="nav-icon" style="color:var(--pp)">◉</span> Paradise Pags</a>
   </div>
   <div class="nav-section">
+    <div class="nav-label">Ferramentas</div>
+    <a class="nav-item" onclick="go('integrador',this)"><span class="nav-icon" style="color:var(--green)">⊕</span> Integrador PIX</a>
+  </div>
+  <div class="nav-section">
     <div class="nav-label">Conta</div>
     <a class="nav-item" onclick="go('perfil',this)"><span class="nav-icon">▣</span> Perfil</a>
   </div>
@@ -588,6 +592,69 @@ canvas{display:block;}
               <div class="wh-log" id="wh-tx-log">
                 <div class="wh-empty">Nenhum pagamento recebido ainda.</div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTEGRADOR PIX -->
+    <div class="panel" id="panel-integrador">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div class="card">
+            <div class="card-title">⊕ Integrador PIX <span class="badge" style="background:rgba(0,255,136,.1);color:var(--green);border-color:rgba(0,255,136,.2);">NOVO</span></div>
+            <div style="font-size:.7rem;color:var(--text2);margin-bottom:20px;line-height:1.8;">Configure sua API PIX aqui. O site do cliente só precisa do seu <strong style="color:var(--accent)">User ID</strong> — a chave fica protegida no servidor.</div>
+
+            <div class="form-section">Gateway</div>
+            <div class="fg">
+              <label>Gateway de pagamento</label>
+              <select class="input" id="int-gw" onchange="toggleIntGw()">
+                <option value="pp">Paradise Pags</option>
+                <option value="z1">Zero One Pay</option>
+              </select>
+            </div>
+            <div class="fg"><label>API Key / Token</label><input class="input" id="int-key" type="password" placeholder="sk_... ou seu api_token"></div>
+
+            <div id="int-z1-fields" style="display:none;">
+              <div class="fg"><label>offer_hash</label><input class="input" id="int-off" placeholder="ex: wtuk6qihsb_jgndu9xkee"></div>
+              <div class="fg"><label>product_hash</label><input class="input" id="int-prod" placeholder="ex: wtuk6qihsb"></div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="form-section">Produto</div>
+            <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="int-amt" type="number" placeholder="2700"><div class="input-hint">Ex: 2700 = R$ 27,00</div></div>
+            <div class="fg"><label>description</label><input class="input" id="int-desc" placeholder="Envio Shopee Card"></div>
+            <div class="fg"><label>document <span style="color:var(--text3)">(CPF vendedor fallback)</span></label><input class="input" id="int-doc" placeholder="00000000000"></div>
+            <div class="fg"><label>Cor do botão PIX</label><input class="input" id="int-color" type="color" value="#00e5ff" style="height:40px;padding:4px 8px;cursor:pointer;"></div>
+
+            <div class="btn-row">
+              <button class="btn btn-primary btn-lg" onclick="saveIntegration()"><span id="int-bi">⊕</span> <span id="int-bt">Salvar configuração</span></button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" id="int-code-card" style="display:none;">
+            <div class="card-title">✓ Código para o site</div>
+            <div style="font-size:.7rem;color:var(--text2);margin-bottom:16px;line-height:1.8;">Cole esse código no HTML do site do cliente, antes do <code style="color:var(--accent)">&lt;/body&gt;</code>, e troque o <code style="color:var(--accent)">onclick</code> do botão para <code style="color:var(--accent)">PayOS.pagar()</code></div>
+
+            <pre class="r-pre" id="int-snippet" style="font-size:.62rem;line-height:1.8;cursor:pointer;border:1px solid var(--border2);padding:16px;border-radius:10px;" onclick="cpSnippet()"></pre>
+
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn btn-green" onclick="cpSnippet()">📋 Copiar código</button>
+            </div>
+
+            <div class="divider"></div>
+            <div class="form-section">Resultado no site</div>
+            <div style="font-size:.7rem;color:var(--text2);margin-bottom:12px;">Prévia do modal que o cliente vai ver:</div>
+            <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="PayOS_preview()">🧪 Testar modal PIX</button>
+          </div>
+
+          <div class="card" id="int-empty-card">
+            <div style="text-align:center;padding:40px 20px;color:var(--text2);">
+              <div style="font-size:2rem;margin-bottom:12px;">⊕</div>
+              <div style="font-size:.75rem;">Configure e salve para gerar o código</div>
             </div>
           </div>
         </div>
@@ -1090,6 +1157,83 @@ async function changePassword() {
   if(sb){await sb.auth.updateUser({password:np});}
   $('p-np').value='';$('p-np2').value='';
   toast('Senha atualizada!');
+}
+
+// ── INTEGRADOR PIX ──
+function toggleIntGw() {
+  const gw = v('int-gw');
+  $('int-z1-fields').style.display = gw === 'z1' ? 'block' : 'none';
+}
+
+async function saveIntegration() {
+  const gw = v('int-gw'), key = v('int-key'), amt = parseInt(v('int-amt')||0);
+  const desc = v('int-desc'), doc = v('int-doc'), color = v('int-color')||'#00e5ff';
+  const off = v('int-off'), prod = v('int-prod');
+
+  if(!key){toast('Informe a API Key');return;}
+  if(!amt){toast('Informe o valor (amount)');return;}
+  if(!desc){toast('Informe a descrição');return;}
+  if(gw==='z1'&&!off){toast('Informe o offer_hash');return;}
+  if(gw==='z1'&&!prod){toast('Informe o product_hash');return;}
+
+  const bi=$('int-bi'),bt=$('int-bt');
+  bi.innerHTML='<span class="spin"></span>'; bt.textContent='Salvando...';
+
+  try {
+    const row = {
+      user_id: currentUser.id,
+      gateway: gw,
+      api_key: key,
+      amount: amt,
+      description: desc,
+      seller_doc: doc||'00000000000',
+      accent_color: color,
+      offer_hash: off||null,
+      product_hash: prod||null,
+      updated_at: new Date().toISOString()
+    };
+
+    // upsert — salva ou atualiza
+    const { error } = await sb.from('integrations').upsert(row, { onConflict: 'user_id' });
+    if(error) throw error;
+
+    toast('✓ Configuração salva!');
+    showIntSnippet();
+  } catch(e) {
+    toast('Erro ao salvar: '+e.message);
+  }
+
+  bi.innerHTML='⊕'; bt.textContent='Salvar configuração';
+}
+
+function showIntSnippet() {
+  const uid = currentUser?.id || 'SEU_USER_ID';
+  const snippet = `<script>
+  window.PayOSConfig = { userId: '${uid}' }
+<\/script>
+<script src="https://pixflow1.vercel.app/pix.js"><\/script>`;
+
+  $('int-snippet').textContent = snippet;
+  $('int-code-card').style.display = 'block';
+  $('int-empty-card').style.display = 'none';
+}
+
+function cpSnippet() {
+  const txt = $('int-snippet').textContent;
+  navigator.clipboard.writeText(txt).then(()=>toast('✓ Código copiado!'));
+}
+
+function PayOS_preview() {
+  // carrega o pix.js dinamicamente para prévia
+  window.PayOSConfig = { userId: currentUser?.id };
+  if(window.PayOS) {
+    window.PayOS.pagar();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://pixflow1.vercel.app/pix.js';
+    s.onload = () => window.PayOS?.pagar();
+    document.head.appendChild(s);
+  }
 }
 
 // ── MOBILE ──
