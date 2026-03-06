@@ -443,33 +443,20 @@ canvas{display:block;}
             <div class="card-title">Zero One Pay <span class="badge badge-z1">PIX</span></div>
 
             <div class="form-section">Autenticação</div>
-            <div class="fg"><label>API Token</label><input class="input" id="z1-tok" type="password" placeholder="API Token da Zero One Pay"><div class="input-hint">Encontre em: dashboard.zeroonepay.com.br → API</div></div>
-            <div class="fg"><label>Offer Hash</label><input class="input" id="z1-off" placeholder="hash_do_produto_aqui"><div class="input-hint">Hash do produto ou oferta</div></div>
+            <div class="fg"><label>api_token</label><input class="input" id="z1-tok" type="password" placeholder="Seu API Token"><div class="input-hint">dashboard.zeroonepay.com.br → API</div></div>
+            <div class="fg"><label>offer_hash</label><input class="input" id="z1-off" placeholder="ex: wtuk6qihsb_jgndu9xkee"></div>
 
             <div class="divider"></div>
             <div class="form-section">Cobrança</div>
-            <div class="fg-row">
-              <div class="fg"><label>Valor (centavos)</label><input class="input" id="z1-amt" type="number" placeholder="19700" value="19700"></div>
-              <div class="fg"><label>Quantidade</label><input class="input" id="z1-qty" type="number" placeholder="1" value="1"></div>
-            </div>
-            <div class="fg"><label>Product Hash</label><input class="input" id="z1-prod" placeholder="hash_do_produto"></div>
-            <div class="fg"><label>Título do produto</label><input class="input" id="z1-ttl" placeholder="Curso de Excel Avançado"></div>
+            <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="z1-amt" type="number" placeholder="15000"><div class="input-hint">Ex: 15000 = R$ 150,00</div></div>
 
             <div class="divider"></div>
             <div class="form-section">Cliente</div>
-            <div class="fg-row">
-              <div class="fg"><label>Nome</label><input class="input" id="z1-name" placeholder="João Silva"></div>
-              <div class="fg"><label>E-mail</label><input class="input" id="z1-email" type="email" placeholder="cliente@email.com"></div>
-            </div>
-            <div class="fg-row">
-              <div class="fg"><label>Telefone</label><input class="input" id="z1-tel" placeholder="11999999999"></div>
-              <div class="fg"><label>CPF do cliente</label><input class="input" id="z1-doc" placeholder="000.000.000-00"><div class="input-hint">Opcional</div></div>
-            </div>
-            <div class="fg"><label>CPF padrão (fallback)</label><input class="input" id="z1-dfl" placeholder="Seu CPF — usado se cliente não preencher"></div>
-
-            <div class="divider"></div>
-            <div class="form-section">Webhook (opcional)</div>
-            <div class="fg"><label>URL de notificação</label><input class="input" id="z1-wh-url" placeholder="https://seusite.com/webhook/z1"><div class="input-hint">Receberá POST quando o pagamento for confirmado</div></div>
+            <div class="fg"><label>name</label><input class="input" id="z1-name" placeholder="João Silva"></div>
+            <div class="fg"><label>email</label><input class="input" id="z1-email" type="email" placeholder="joao@email.com"></div>
+            <div class="fg"><label>phone_number</label><input class="input" id="z1-tel" placeholder="21999999999"></div>
+            <div class="fg"><label>document <span style="color:var(--text3)">(CPF cliente)</span></label><input class="input" id="z1-doc" placeholder="09115751031"><div class="input-hint">Opcional — se vazio usa o CPF do vendedor</div></div>
+            <div class="fg"><label>document <span style="color:var(--accent)">(CPF vendedor — fallback)</span></label><input class="input" id="z1-dfl" placeholder="Seu CPF sem pontos"></div>
 
             <div class="btn-row">
               <button class="btn btn-primary btn-lg" onclick="z1Submit()"><span id="z1-bi">⚡</span> <span id="z1-bt">Gerar cobrança PIX</span></button>
@@ -511,32 +498,22 @@ canvas{display:block;}
             <div class="card-title">Paradise Pags <span class="badge badge-pp">PIX</span></div>
 
             <div class="form-section">Autenticação</div>
-            <div class="fg"><label>X-API-Key</label><input class="input" id="pp-key" type="password" placeholder="sk_SUA_CHAVE_PARADISE"><div class="input-hint">Encontre em: paradise pags → Configurações → API</div></div>
+            <div class="fg"><label>X-API-Key</label><input class="input" id="pp-key" type="password" placeholder="sk_sua_chave_secreta"><div class="input-hint">Portal Paradise → Configurações e API</div></div>
 
             <div class="divider"></div>
             <div class="form-section">Cobrança</div>
-            <div class="fg-row">
-              <div class="fg"><label>Valor (centavos)</label><input class="input" id="pp-amt" type="number" placeholder="2990" value="2990"></div>
-              <div class="fg"><label>Referência</label><input class="input" id="pp-ref" placeholder="REF-001"></div>
-            </div>
-            <div class="fg"><label>Descrição</label><input class="input" id="pp-desc" placeholder="Ebook de Finanças"></div>
-            <div class="fg"><label>UTM Source</label><input class="input" id="pp-utm" placeholder="instagram, google, etc (opcional)"></div>
+            <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="pp-amt" type="number" placeholder="1000"><div class="input-hint">Ex: 1000 = R$ 10,00</div></div>
+            <div class="fg"><label>description</label><input class="input" id="pp-desc" placeholder="Produto Teste"></div>
+            <div class="fg"><label>reference</label><input class="input" id="pp-ref" placeholder="REF-12345"><div class="input-hint">Seu identificador único para a transação</div></div>
+            <div class="fg"><label>productHash <span style="color:var(--text3)">(opcional)</span></label><input class="input" id="pp-prod" placeholder="hash_do_produto"></div>
 
             <div class="divider"></div>
             <div class="form-section">Cliente</div>
-            <div class="fg-row">
-              <div class="fg"><label>Nome</label><input class="input" id="pp-name" placeholder="Maria Santos"></div>
-              <div class="fg"><label>E-mail</label><input class="input" id="pp-email" type="email" placeholder="cliente@email.com"></div>
-            </div>
-            <div class="fg-row">
-              <div class="fg"><label>Telefone</label><input class="input" id="pp-tel" placeholder="11999999999"></div>
-              <div class="fg"><label>CPF do cliente</label><input class="input" id="pp-doc" placeholder="000.000.000-00"><div class="input-hint">Opcional</div></div>
-            </div>
-            <div class="fg"><label>CPF padrão (fallback)</label><input class="input" id="pp-dfl" placeholder="Seu CPF — usado se cliente não preencher"></div>
-
-            <div class="divider"></div>
-            <div class="form-section">Webhook (opcional)</div>
-            <div class="fg"><label>URL de notificação</label><input class="input" id="pp-wh-url" placeholder="https://seusite.com/webhook/pp"><div class="input-hint">Receberá POST quando o pagamento for confirmado</div></div>
+            <div class="fg"><label>name</label><input class="input" id="pp-name" placeholder="João da Silva"></div>
+            <div class="fg"><label>email</label><input class="input" id="pp-email" type="email" placeholder="joao@teste.com"></div>
+            <div class="fg"><label>phone</label><input class="input" id="pp-tel" placeholder="11999999999"></div>
+            <div class="fg"><label>document <span style="color:var(--text3)">(CPF cliente)</span></label><input class="input" id="pp-doc" placeholder="05531510101"><div class="input-hint">Opcional — se vazio usa o CPF do vendedor</div></div>
+            <div class="fg"><label>document <span style="color:var(--accent)">(CPF vendedor — fallback)</span></label><input class="input" id="pp-dfl" placeholder="Seu CPF sem pontos"></div>
 
             <div class="btn-row">
               <button class="btn btn-primary btn-lg" onclick="ppSubmit()"><span id="pp-bi">⚡</span> <span id="pp-bt">Gerar cobrança PIX</span></button>
@@ -978,16 +955,16 @@ setInterval(() => { if(currentUser) loadTransactions(); }, 30000);
 
 // ── ZERO ONE PAY ──
 async function z1Submit() {
-  const tok=v('z1-tok'),off=v('z1-off'),amt=parseInt(v('z1-amt')||0),prod=v('z1-prod'),ttl=v('z1-ttl'),qty=parseInt(v('z1-qty')||1);
-  const name=v('z1-name'),email=v('z1-email'),tel=v('z1-tel'),doc=v('z1-doc'),dfl=v('z1-dfl');
-  const finalDoc=doc||dfl||'00000000000';
-  if(!tok){toast('Informe o API Token');return;}
-  if(!off){toast('Informe o Offer Hash');return;}
-  if(!amt){toast('Informe o valor');return;}
+  const tok=v('z1-tok'), off=v('z1-off'), amt=parseInt(v('z1-amt')||0);
+  const name=v('z1-name'), email=v('z1-email'), tel=v('z1-tel');
+  const doc=v('z1-doc'), dfl=v('z1-dfl');
+  const finalDoc = doc || dfl || '00000000000';
+  if(!tok){toast('Informe o api_token');return;}
+  if(!off){toast('Informe o offer_hash');return;}
+  if(!amt){toast('Informe o amount');return;}
   const bi=$('z1-bi'),bt=$('z1-bt'); bi.innerHTML='<span class="spin"></span>'; bt.textContent='Gerando...';
 
   try {
-    const webhookUrl = getWebhookUrl();
     const resp = await fetch('https://khrygwuykvojnlnaqmys.supabase.co/functions/v1/pix-z1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -995,38 +972,31 @@ async function z1Submit() {
         api_token: tok,
         amount: amt,
         offer_hash: off,
-        webhook_url: webhookUrl,
+        webhook_url: getWebhookUrl(),
         customer: {
           name: name||'Anônimo',
           email: email||'sem-email@checkout.com',
           phone_number: tel||'00000000000',
           document: finalDoc
-        },
-        cart: [{
-          product_hash: prod||off,
-          title: ttl||'Produto',
-          price: amt,
-          quantity: qty,
-          operation_type: 1,
-          tangible: false
-        }]
+        }
       })
     });
 
     const data = await resp.json();
     showResp('z1', resp.status, data);
 
-    if (resp.ok && data.pix?.qr_code) {
+    const pixCode = data.pix?.pix_qr_code || data.pix?.qr_code;
+    if (resp.ok && pixCode) {
       $('z1-qr').classList.add('show');
-      drawQR('z1-cv', data.pix.qr_code);
+      drawQR('z1-cv', pixCode);
       const bc=$('z1-bc');
-      bc.textContent=data.pix.qr_code.length>80?data.pix.qr_code.substring(0,80)+'...':data.pix.qr_code;
-      bc.setAttribute('data-full', data.pix.qr_code);
+      bc.textContent=pixCode.length>80?pixCode.substring(0,80)+'...':pixCode;
+      bc.setAttribute('data-full', pixCode);
       startTimer('z1-timer', 15);
-      addTx('z1', ttl||'Produto', amt, doc?'CPF do cliente':dfl?'CPF padrão':'sem CPF');
+      addTx('z1', data.offer?.title||'Produto', amt, doc?'CPF cliente':'CPF vendedor');
       toast('✓ PIX real gerado!');
     } else {
-      toast('Erro: '+(data.message||data.error||'verifique o response'));
+      toast('Erro: '+(data.message||data.error||data.errors?.[0]||'verifique o response'));
     }
   } catch(e) {
     toast('Erro de conexão: '+e.message);
@@ -1040,16 +1010,16 @@ function z1Clear(){['z1-tok','z1-off','z1-amt','z1-prod','z1-ttl','z1-qty','z1-n
 
 // ── PARADISE PAGS ──
 async function ppSubmit() {
-  const key=v('pp-key'),amt=parseInt(v('pp-amt')||0),desc=v('pp-desc'),ref=v('pp-ref'),utm=v('pp-utm');
-  const name=v('pp-name'),email=v('pp-email'),tel=v('pp-tel'),doc=v('pp-doc'),dfl=v('pp-dfl');
-  const finalDoc=doc||dfl||'00000000000';
+  const key=v('pp-key'), amt=parseInt(v('pp-amt')||0), desc=v('pp-desc'), ref=v('pp-ref');
+  const name=v('pp-name'), email=v('pp-email'), tel=v('pp-tel');
+  const doc=v('pp-doc'), dfl=v('pp-dfl'), prod=v('pp-prod');
+  const finalDoc = doc || dfl || '00000000000';
   if(!key){toast('Informe o X-API-Key');return;}
-  if(!amt){toast('Informe o valor');return;}
-  if(!desc){toast('Informe a descrição');return;}
+  if(!amt){toast('Informe o amount');return;}
+  if(!desc){toast('Informe a description');return;}
   const bi=$('pp-bi'),bt=$('pp-bt'); bi.innerHTML='<span class="spin"></span>'; bt.textContent='Gerando...';
 
   try {
-    const webhookUrl = getWebhookUrl();
     const reference = ref || 'REF-'+rnd(10).toUpperCase();
     const resp = await fetch('https://khrygwuykvojnlnaqmys.supabase.co/functions/v1/pix-pp', {
       method: 'POST',
@@ -1059,28 +1029,29 @@ async function ppSubmit() {
         amount: amt,
         description: desc,
         reference,
-        postback_url: webhookUrl,
+        postback_url: getWebhookUrl(),
+        product_hash: prod || undefined,
         customer: {
           name: name||'Anônimo',
           email: email||'sem-email@checkout.com',
           phone: tel||'00000000000',
           document: finalDoc
-        },
-        utm: utm ? { utm_source: utm } : undefined
+        }
       })
     });
 
     const data = await resp.json();
     showResp('pp', resp.status, data);
 
-    if (resp.ok && data.qr_code) {
+    const pixCode = data.qr_code;
+    if ((resp.ok || data.status === 'success') && pixCode) {
       $('pp-qr').classList.add('show');
-      drawQR('pp-cv', data.qr_code);
+      drawQR('pp-cv', pixCode);
       const bc=$('pp-bc');
-      bc.textContent=data.qr_code.length>80?data.qr_code.substring(0,80)+'...':data.qr_code;
-      bc.setAttribute('data-full', data.qr_code);
+      bc.textContent=pixCode.length>80?pixCode.substring(0,80)+'...':pixCode;
+      bc.setAttribute('data-full', pixCode);
       startTimer('pp-timer', 15);
-      addTx('pp', desc, amt, doc?'CPF do cliente':dfl?'CPF padrão':'sem CPF');
+      addTx('pp', desc, amt, doc?'CPF cliente':'CPF vendedor');
       toast('✓ PIX real gerado!');
     } else {
       toast('Erro: '+(data.message||data.error||'verifique o response'));
