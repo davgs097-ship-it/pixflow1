@@ -517,60 +517,26 @@ canvas{display:block;}
         <div>
           <div class="wh-card">
             <div class="wh-header">
-              <div class="wh-title">Configurar Webhook</div>
-              <div class="wh-toggle">
-                <div class="toggle" id="wh-toggle" onclick="toggleWebhook()"></div>
-                <span class="toggle-label" id="wh-toggle-label">Desativado</span>
-              </div>
+              <div class="wh-title">Sua URL de Webhook</div>
+              <span class="badge badge-wh">ÚNICO POR CONTA</span>
             </div>
             <div class="wh-body">
-              <div class="fg"><label>URL do endpoint</label>
-                <div class="wh-url-row">
-                  <input class="input" id="wh-url" placeholder="https://seusite.com/webhook/payos">
-                  <button class="btn btn-primary" onclick="saveWebhook()">Salvar</button>
-                </div>
-                <div class="input-hint">Receberá um POST com os dados da transação</div>
+              <div style="font-size:.7rem;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+                Cole essa URL no campo de webhook do seu gateway. Quando um pagamento for confirmado, ele será salvo automaticamente na sua conta.
               </div>
-
-              <div class="fg">
-                <label>Eventos</label>
-                <div class="wh-events">
-                  <div class="wh-ev on" id="ev-payment_confirmed" onclick="toggleEvent(this)">payment.confirmed</div>
-                  <div class="wh-ev on" id="ev-payment_pending" onclick="toggleEvent(this)">payment.pending</div>
-                  <div class="wh-ev" id="ev-payment_failed" onclick="toggleEvent(this)">payment.failed</div>
-                  <div class="wh-ev" id="ev-payment_refunded" onclick="toggleEvent(this)">payment.refunded</div>
-                </div>
+              <div class="wh-secret" id="wh-url-box" style="cursor:pointer;" onclick="cpWhUrl()">
+                <span class="wh-secret-val" id="wh-user-url" style="font-size:.6rem;word-break:break-all;">Carregando...</span>
+                <button class="btn" style="padding:4px 10px;font-size:.6rem;flex-shrink:0;">Copiar</button>
               </div>
-
-              <div class="fg">
-                <label>Secret de assinatura</label>
-                <div class="wh-secret">
-                  <span class="wh-secret-val" id="wh-secret-val">—</span>
-                  <button class="btn" style="padding:4px 10px;font-size:.6rem;" onclick="genSecret()">Gerar novo</button>
-                </div>
-                <div class="input-hint">Use para validar a autenticidade do webhook via HMAC-SHA256</div>
-              </div>
+              <div class="input-hint" style="margin-top:8px;">Clique para copiar · Funciona com Zero One Pay e Paradise Pags</div>
 
               <div class="divider"></div>
-              <div class="form-section">Payload de exemplo</div>
-              <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:.65rem;color:var(--accent);line-height:1.7;overflow-x:auto;">{
-  "event": "payment.confirmed",
-  "transaction_id": "TXN-XXXX",
-  "gateway": "zero_one_pay",
-  "amount": 19700,
-  "currency": "BRL",
-  "status": "paid",
-  "customer": {
-    "name": "João Silva",
-    "email": "joao@email.com",
-    "document": "000.000.000-00"
-  },
-  "paid_at": "2025-03-05T22:00:00Z",
-  "signature": "sha256=HMAC..."
-}</pre>
-              <div class="btn-row">
-                <button class="btn btn-primary" onclick="testWebhook()">▶ Testar webhook</button>
-                <button class="btn" onclick="cpWebhookPayload()">Copiar payload</button>
+              <div class="form-section">Como usar</div>
+              <div style="font-size:.72rem;color:var(--text2);line-height:1.9;">
+                <div style="margin-bottom:8px;">① Copie a URL acima</div>
+                <div style="margin-bottom:8px;">② No gateway (Z1 ou Paradise), cole no campo <strong style="color:var(--text)">Webhook URL</strong></div>
+                <div style="margin-bottom:8px;">③ Quando um pagamento PIX for pago, você receberá aqui automaticamente</div>
+                <div>④ Veja os pagamentos na aba <strong style="color:var(--text)">Transações</strong></div>
               </div>
             </div>
           </div>
@@ -578,23 +544,13 @@ canvas{display:block;}
         <div>
           <div class="wh-card">
             <div class="wh-header">
-              <div class="wh-title">Log de entregas</div>
-              <button class="btn" style="padding:4px 10px;font-size:.62rem;" onclick="clearWhLog()">Limpar</button>
+              <div class="wh-title">Últimos pagamentos recebidos</div>
+              <button class="btn" style="padding:4px 10px;font-size:.62rem;" onclick="loadTransactions()">↻ Atualizar</button>
             </div>
             <div class="wh-body" style="padding:0;">
-              <div class="wh-log" id="wh-log">
-                <div class="wh-empty">Nenhum webhook disparado ainda.<br>Gere uma transação para ver os logs.</div>
+              <div class="wh-log" id="wh-tx-log">
+                <div class="wh-empty">Nenhum pagamento recebido ainda.</div>
               </div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:16px;">
-            <div class="card-title">Como funciona <span class="badge badge-wh">GUIDE</span></div>
-            <div style="font-size:.72rem;color:var(--text2);line-height:1.9;">
-              <div style="margin-bottom:10px;">① Configure a URL do seu endpoint acima</div>
-              <div style="margin-bottom:10px;">② Ative o webhook e selecione os eventos</div>
-              <div style="margin-bottom:10px;">③ Ao gerar uma cobrança PIX, insira a URL no campo "Webhook" do gateway</div>
-              <div style="margin-bottom:10px;">④ Quando o pagamento for confirmado, seu endpoint receberá um POST</div>
-              <div>⑤ Valide a assinatura HMAC usando o secret gerado</div>
             </div>
           </div>
         </div>
@@ -802,6 +758,8 @@ function showApp() {
   $('p-email2').value=currentUser?.email||'';
   $('p-company').value=userMeta?.company||currentUser?.user_metadata?.company||'';
   genSecret();
+  showWebhookUrl();
+  loadTransactions();
 }
 
 // Check session on load
@@ -862,88 +820,36 @@ function renderTx() {
 function clearTx() { txList=[]; totalVolume=0; $('d-tx').textContent='0'; $('d-vol').textContent='R$ 0'; renderTx(); toast('Histórico limpo'); }
 
 // ── WEBHOOKS ──
-function toggleWebhook() {
-  whEnabled=!whEnabled;
-  const t=$('wh-toggle'); t.classList.toggle('on',whEnabled);
-  $('wh-toggle-label').textContent=whEnabled?'Ativado':'Desativado';
-  toast(whEnabled?'Webhook ativado!':'Webhook desativado');
+function getWebhookUrl() {
+  const uid = currentUser?.id || 'demo';
+  return `https://khrygwuykvojnlnaqmys.supabase.co/functions/v1/webhook?user=${uid}`;
 }
 
-function saveWebhook() {
-  const url=v('wh-url');
-  if(!url){toast('Informe a URL do webhook');return;}
-  toast('Webhook salvo: '+url.substring(0,40)+'...');
+function showWebhookUrl() {
+  const el = $('wh-user-url');
+  if (el) el.textContent = getWebhookUrl();
 }
 
-function toggleEvent(el) {
-  const evId=el.id.replace('ev-','');
-  el.classList.toggle('on');
-  if(el.classList.contains('on')) whEvents.push(evId);
-  else whEvents=whEvents.filter(e=>e!==evId);
+function cpWhUrl() {
+  navigator.clipboard.writeText(getWebhookUrl()).then(() => toast('URL do webhook copiada!'));
 }
 
-function genSecret() {
-  whSecret='whsec_'+rnd(32);
-  const el=$('wh-secret-val'); if(el) el.textContent=whSecret;
-}
-
-async function dispatchWebhook(tx) {
-  const url=v('wh-url')||v('z1-wh-url')||v('pp-wh-url');
-  if(!url||!whEnabled) return;
-  const payload={
-    event:'payment.pending',
-    transaction_id:tx.id,
-    gateway:tx.gw==='z1'?'zero_one_pay':'paradise_pags',
-    amount:tx.amount,
-    currency:'BRL',
-    status:'pending',
-    customer:{cpf_origem:tx.cpfSrc},
-    product:tx.product,
-    created_at:new Date().toISOString(),
-    signature:'sha256='+rnd(64)
-  };
-  addWhLog('pending','Enviando para '+url.substring(0,40)+'...');
-  try {
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-PayOS-Signature':'sha256='+rnd(64),'X-PayOS-Event':'payment.pending'},body:JSON.stringify(payload)});
-    addWhLog(r.ok?'ok':'fail',r.ok?`✓ ${r.status} entregue`:`✗ ${r.status} falhou`);
-    $('d-wh').textContent=parseInt($('d-wh').textContent)+1;
-  } catch(e) {
-    addWhLog('fail','✗ Erro de conexão: '+e.message);
-  }
-}
-
-async function testWebhook() {
-  const url=v('wh-url');
-  if(!url){toast('Informe a URL primeiro');return;}
-  const payload={event:'payment.confirmed',transaction_id:'TEST-'+rnd(8).toUpperCase(),gateway:'test',amount:1000,currency:'BRL',status:'paid',test:true,sent_at:new Date().toISOString()};
-  addWhLog('pending','Teste: enviando para '+url.substring(0,40)+'...');
-  try {
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-PayOS-Signature':'sha256=test','X-PayOS-Event':'payment.confirmed'},body:JSON.stringify(payload)});
-    addWhLog(r.ok?'ok':'fail',r.ok?`✓ ${r.status} teste entregue`:`✗ ${r.status} teste falhou`);
-    toast(r.ok?'Webhook de teste enviado!':'Webhook falhou: '+r.status);
-  } catch(e) {
-    addWhLog('fail','✗ '+e.message);
-    toast('Erro: '+e.message);
-  }
-}
-
-function addWhLog(type,msg) {
-  whLog.unshift({type,msg,time:new Date().toLocaleTimeString('pt-BR')});
-  const el=$('wh-log');
-  el.innerHTML=whLog.map(w=>`
+async function loadTransactions() {
+  if (!sb || !currentUser) return;
+  const { data } = await sb.from('transactions').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+  const el = $('wh-tx-log');
+  if (!data?.length) { el.innerHTML = '<div class="wh-empty">Nenhum pagamento recebido ainda.</div>'; return; }
+  el.innerHTML = data.map(t => `
     <div class="wh-log-entry">
-      <span class="wh-log-time">${w.time}</span>
-      <span class="wh-log-badge wh-${w.type}">${w.type.toUpperCase()}</span>
-      <span class="wh-log-msg">${w.msg}</span>
+      <span class="wh-log-time">${new Date(t.created_at).toLocaleTimeString('pt-BR')}</span>
+      <span class="wh-log-badge ${t.status==='pago'?'wh-ok':'wh-pend'}">${t.status.toUpperCase()}</span>
+      <span class="wh-log-msg">${t.gateway} · R$ ${((t.amount||0)/100).toFixed(2)} · ${t.customer_name||'—'}</span>
     </div>
   `).join('');
-}
-
-function clearWhLog() { whLog=[]; $('wh-log').innerHTML='<div class="wh-empty">Log limpo</div>'; }
-
-function cpWebhookPayload() {
-  const p={event:'payment.confirmed',transaction_id:'TXN-XXXX',gateway:'zero_one_pay',amount:19700,currency:'BRL',status:'paid',customer:{name:'João Silva',email:'joao@email.com',document:'000.000.000-00'},paid_at:new Date().toISOString(),signature:'sha256=HMAC...'};
-  navigator.clipboard.writeText(JSON.stringify(p,null,2)).then(()=>toast('Payload copiado!'));
+  // update stats
+  $('d-tx').textContent = data.length;
+  const vol = data.reduce((s,t)=>s+(t.amount||0),0);
+  $('d-vol').textContent = 'R$ '+(vol/100).toFixed(2).replace('.',',');
 }
 
 // ── ZERO ONE PAY ──
@@ -964,10 +870,6 @@ async function z1Submit() {
   addTx('z1',ttl||'Produto',amt,docSrc);
   bi.innerHTML='⚡'; bt.textContent='Gerar cobrança PIX';
   toast(!doc&&dfl?`✓ CPF padrão usado`:'✓ Cobrança PIX gerada!');
-
-  // Simulate webhook if URL provided
-  const whUrl=v('z1-wh-url');
-  if(whUrl) { whEnabled=true; $('wh-url').value=whUrl; }
 }
 
 function z1Clear(){['z1-tok','z1-off','z1-amt','z1-prod','z1-ttl','z1-qty','z1-name','z1-email','z1-tel','z1-doc','z1-dfl','z1-wh-url'].forEach(i=>$(i)&&($(i).value=''));$('z1-resp').classList.remove('show');$('z1-qr').classList.remove('show');}
@@ -990,9 +892,6 @@ async function ppSubmit() {
   addTx('pp',desc||'Produto',amt,docSrc);
   bi.innerHTML='⚡'; bt.textContent='Gerar cobrança PIX';
   toast(!doc&&dfl?`✓ CPF padrão usado`:'✓ Cobrança PIX gerada!');
-
-  const whUrl=v('pp-wh-url');
-  if(whUrl) { whEnabled=true; $('wh-url').value=whUrl; }
 }
 
 function ppClear(){['pp-key','pp-amt','pp-desc','pp-ref','pp-name','pp-email','pp-tel','pp-doc','pp-dfl','pp-utm','pp-wh-url'].forEach(i=>$(i)&&($(i).value=''));$('pp-resp').classList.remove('show');$('pp-qr').classList.remove('show');}
