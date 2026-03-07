@@ -534,6 +534,7 @@ canvas{display:block;}
             <div class="fg"><label>description</label><input class="input" id="int-desc" placeholder="Envio Shopee Card"></div>
             <div class="fg"><label>CPF vendedor fallback</label><input class="input" id="int-doc" placeholder="00000000000"></div>
             <div class="fg"><label>Cor do botão PIX</label><input class="input" id="int-color" type="color" value="#00e5ff" style="height:40px;padding:4px 8px;cursor:pointer;"></div>
+            <div class="fg"><label>URL de redirecionamento <span style="color:var(--text3)">(upsell — opcional)</span></label><input class="input" id="int-redirect" placeholder="https://seusite.com/obrigado"><div class="input-hint">Após pagamento confirmado, cliente será redirecionado</div></div>
 
             <div class="btn-row">
               <button class="btn btn-primary btn-lg" onclick="saveIntegration()"><span id="int-bi">⊕</span> <span id="int-bt">Salvar produto</span></button>
@@ -1122,6 +1123,7 @@ function resetIntForm() {
   $('int-off').value = '';
   $('int-prod').value = '';
   $('int-pp-prod').value = '';
+  if($('int-redirect')) $('int-redirect').value = '';
   $('int-amt').value = '';
   $('int-desc').value = '';
   $('int-doc').value = '';
@@ -1142,6 +1144,7 @@ function editIntegration(id) {
   $('int-off').value = item.offer_hash || '';
   $('int-prod').value = item.product_hash || '';
   $('int-pp-prod').value = item.pp_product_hash || '';
+  $('int-redirect') && ($('int-redirect').value = item.redirect_url || '');
   $('int-amt').value = item.amount || '';
   $('int-desc').value = item.description || '';
   $('int-doc').value = item.seller_doc || '';
@@ -1180,6 +1183,7 @@ async function saveIntegration() {
       offer_hash: off || null,
       product_hash: prod || null,
       pp_product_hash: v('int-pp-prod') || null,
+      redirect_url: v('int-redirect') || null,
       updated_at: new Date().toISOString()
     };
 
