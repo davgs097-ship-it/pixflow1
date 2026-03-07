@@ -111,7 +111,7 @@
 
   function stopRealtime() {
     if (_realtimeChannel) {
-      try { _realtimeChannel.unsubscribe(); } catch(e) {}
+      clearInterval(_realtimeChannel);
       _realtimeChannel = null;
     }
   }
@@ -144,39 +144,19 @@
 
   function startRealtime(reference, userId, redirectUrl) {
     stopRealtime();
-    // carrega Supabase JS via CDN
-    if (!window.__supabaseLoaded) {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-      s.onload = () => {
-        window.__supabaseLoaded = true;
-        _startRealtimeAfterLoad(reference, userId, redirectUrl);
-      };
-      document.head.appendChild(s);
-    } else {
-      _startRealtimeAfterLoad(reference, userId, redirectUrl);
-    }
-  }
-
-  function _startRealtimeAfterLoad(reference, userId, redirectUrl) {
-    try {
-      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      _realtimeChannel = sb
-        .channel('payment-' + reference)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'transactions',
-          filter: `user_id=eq.${userId}`
-        }, (payload) => {
-          if (payload.new && payload.new.status === 'pago') {
-            showConfirmed(redirectUrl);
-          }
-        })
-        .subscribe();
-    } catch(e) {
-      console.log('Realtime error:', e);
-    }
+    // Polling a cada 3s — consulta o Supabase REST direto
+    _realtimeChannel = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/transactions?select=status&user_id=eq.${userId}&order=created_at.desc&limit=1`,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+        );
+        const data = await res.json();
+        if (data && data[0] && data[0].status === 'pago') {
+          showConfirmed(redirectUrl);
+        }
+      } catch(e) {}
+    }, 3000);
   }
 
   function openModal(accent) {
