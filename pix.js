@@ -1,14 +1,12 @@
 (function () {
-  // ── O site só precisa disso ────────────────────────────
-  // window.PayOSConfig = {
-  //   userId: 'SEU_USER_ID_PAYOS',  // único campo necessário!
-  // }
-
   const SUPABASE_FN = 'https://khrygwuykvojnlnaqmys.supabase.co/functions/v1';
-  const userId = (window.PayOSConfig || {}).userId;
+  const SUPABASE_URL = 'https://khrygwuykvojnlnaqmys.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocnlnd3V5a3Zvam5sbmFxbXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2NTU4NTksImV4cCI6MjA1NzIzMTg1OX0.4lrhDNMmH6NsGg8SJjv5zrHMsDPsVoNVkiTTtHb5PEo';
 
   let _cfg = null;
   let timerIv = null;
+  let _realtimeChannel = null;
+  let _currentReference = null;
 
   function injectStyles(accent) {
     const old = document.getElementById('payos-styles');
@@ -106,8 +104,79 @@
 
   function closeModal() {
     clearInterval(timerIv);
+    stopRealtime();
     const el = document.getElementById('payos-overlay');
     if (el) el.remove();
+  }
+
+  function stopRealtime() {
+    if (_realtimeChannel) {
+      try { _realtimeChannel.unsubscribe(); } catch(e) {}
+      _realtimeChannel = null;
+    }
+  }
+
+  function showConfirmed(redirectUrl) {
+    clearInterval(timerIv);
+    stopRealtime();
+    const body = document.getElementById('payos-body');
+    if (!body) return;
+    body.innerHTML = `
+      <div style="padding:32px 20px;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:12px;animation:payos-up .4s ease;">✅</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#00ff88;margin-bottom:8px;">Pagamento confirmado!</div>
+        <div style="font-size:.72rem;color:#6b7280;line-height:1.7;">Seu pagamento foi recebido com sucesso.</div>
+        ${redirectUrl ? `<div style="font-size:.68rem;color:#6b7280;margin-top:12px;">Redirecionando em <span id="payos-redir-count" style="color:#00e5ff;font-weight:700;">3</span>s...</div>` : ''}
+      </div>
+    `;
+    if (redirectUrl) {
+      let count = 3;
+      const iv = setInterval(() => {
+        count--;
+        const el = document.getElementById('payos-redir-count');
+        if (el) el.textContent = count;
+        if (count <= 0) { clearInterval(iv); window.location.href = redirectUrl; }
+      }, 1000);
+    } else {
+      setTimeout(() => closeModal(), 3000);
+    }
+  }
+
+  function startRealtime(reference, userId, redirectUrl) {
+    stopRealtime();
+    // carrega Supabase JS via CDN
+    if (!window.__supabaseLoaded) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+      s.onload = () => {
+        window.__supabaseLoaded = true;
+        _startRealtimeAfterLoad(reference, userId, redirectUrl);
+      };
+      document.head.appendChild(s);
+    } else {
+      _startRealtimeAfterLoad(reference, userId, redirectUrl);
+    }
+  }
+
+  function _startRealtimeAfterLoad(reference, userId, redirectUrl) {
+    try {
+      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      _realtimeChannel = sb
+        .channel('payment-' + reference)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${userId}`
+        }, (payload) => {
+          if (payload.new && payload.new.status === 'pago') {
+            showConfirmed(redirectUrl);
+          }
+        })
+        .subscribe();
+    } catch(e) {
+      console.log('Realtime error:', e);
+    }
   }
 
   function openModal(accent) {
@@ -154,7 +223,9 @@
   }
 
   async function generatePix(cfg) {
+    const userId = (window.PayOSConfig || {}).userId;
     const webhookUrl = `${SUPABASE_FN}/webhook?user=${userId}`;
+    const reference = 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
     try {
       let resp, data, pixCode;
       if (cfg.gateway === 'pp') {
@@ -165,7 +236,7 @@
             api_key: cfg.api_key,
             amount: cfg.amount,
             description: cfg.description || 'Pagamento',
-            reference: 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase(),
+            reference,
             postback_url: webhookUrl,
             product_hash: cfg.pp_product_hash || null,
             customer: { name:'Cliente', email:'cliente+' + Math.random().toString(36).substr(2,8) + '@pagamento.com', phone:'11999999999', document: cfg.seller_doc || '00000000000' }
@@ -192,6 +263,7 @@
       }
       if (pixCode) {
         showPix(pixCode, cfg.amount, cfg.description);
+        startRealtime(reference, userId, cfg.redirect_url || null);
       } else {
         showError('Não foi possível gerar o PIX. Tente novamente.');
       }
