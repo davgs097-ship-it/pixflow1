@@ -640,6 +640,10 @@ canvas{display:block;}
               <div class="fg"><label>product_hash</label><input class="input" id="int-prod" placeholder="ex: wtuk6qihsb"></div>
             </div>
 
+            <div id="int-pp-fields">
+              <div class="fg"><label>productHash <span style="color:var(--text3)">(opcional)</span></label><input class="input" id="int-pp-prod" placeholder="hash do produto Paradise"><div class="input-hint">Deixe vazio se não tiver</div></div>
+            </div>
+
             <div class="divider"></div>
             <div class="form-section">Produto</div>
             <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="int-amt" type="number" placeholder="2700"><div class="input-hint">Ex: 2700 = R$ 27,00</div></div>
@@ -1241,6 +1245,7 @@ async function loadIntegration() {
     if($('int-color')) $('int-color').value = data.accent_color || '#00e5ff';
     if($('int-off')) $('int-off').value = data.offer_hash || '';
     if($('int-prod')) $('int-prod').value = data.product_hash || '';
+    if($('int-pp-prod')) $('int-pp-prod').value = data.pp_product_hash || '';
     toggleIntGw();
     showIntSnippet();
   } catch(e) { /* sem config ainda */ }
@@ -1250,6 +1255,7 @@ async function loadIntegration() {
 function toggleIntGw() {
   const gw = v('int-gw');
   $('int-z1-fields').style.display = gw === 'z1' ? 'block' : 'none';
+  $('int-pp-fields').style.display = gw === 'pp' ? 'block' : 'none';
 }
 
 async function saveIntegration() {
@@ -1277,6 +1283,7 @@ async function saveIntegration() {
       accent_color: color,
       offer_hash: off||null,
       product_hash: prod||null,
+      pp_product_hash: v('int-pp-prod')||null,
       updated_at: new Date().toISOString()
     };
 
