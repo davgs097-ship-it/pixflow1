@@ -383,8 +383,7 @@ canvas{display:block;}
   </div>
   <div class="nav-section">
     <div class="nav-label">Gateways PIX</div>
-    <a class="nav-item" onclick="go('z1',this)"><span class="nav-icon" style="color:var(--z1)">◉</span> Zero One Pay</a>
-    <a class="nav-item" onclick="go('pp',this)"><span class="nav-icon" style="color:var(--pp)">◉</span> Paradise Pags</a>
+
   </div>
   <div class="nav-section">
     <div class="nav-label">Ferramentas</div>
@@ -436,13 +435,13 @@ canvas{display:block;}
       </div>
       <div class="sec-head"><div class="sec-title">Acesso rápido</div><div class="sec-line"></div></div>
       <div class="quick-grid">
-        <div class="quick-card" onclick="go('z1',null)">
-          <div class="quick-icon" style="background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.2);">◉</div>
-          <div><div class="quick-label" style="color:var(--z1)">Zero One Pay</div><div class="quick-sub">POST /v1/transactions</div></div>
+        <div class="quick-card" onclick="go('integrador',null)">
+          <div class="quick-icon" style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);">⊕</div>
+          <div><div class="quick-label" style="color:var(--green)">Integrador PIX</div><div class="quick-sub">Gerenciar produtos</div></div>
         </div>
-        <div class="quick-card" onclick="go('pp',null)">
-          <div class="quick-icon" style="background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.2);">◉</div>
-          <div><div class="quick-label" style="color:var(--pp)">Paradise Pags</div><div class="quick-sub">POST /v1/transaction.php</div></div>
+        <div class="quick-card" onclick="go('chat',null)">
+          <div class="quick-icon" style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.15);">◎</div>
+          <div><div class="quick-label" style="color:var(--accent)">Integrador Sites</div><div class="quick-sub">Injetar PIX no HTML</div></div>
         </div>
         <div class="quick-card" onclick="go('webhooks',null)">
           <div class="quick-icon" style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.15);">⚡</div>
@@ -459,118 +458,6 @@ canvas{display:block;}
     </div>
 
     <!-- ZERO ONE PAY -->
-    <div class="panel" id="panel-z1">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div>
-          <div class="card">
-            <div class="card-title">Zero One Pay <span class="badge badge-z1">PIX</span></div>
-
-            <div class="form-section">Autenticação</div>
-            <div class="fg"><label>api_token</label><input class="input" id="z1-tok" type="password" placeholder="Seu API Token"><div class="input-hint">dashboard.zeroonepay.com.br → API</div></div>
-            <div class="fg"><label>offer_hash</label><input class="input" id="z1-off" placeholder="ex: wtuk6qihsb_jgndu9xkee"></div>
-            <div class="fg"><label>product_hash</label><input class="input" id="z1-prod" placeholder="ex: wtuk6qihsb"><div class="input-hint">Hash do produto (sem o sufixo da oferta)</div></div>
-
-            <div class="divider"></div>
-            <div class="form-section">Cobrança</div>
-            <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="z1-amt" type="number" placeholder="15000"><div class="input-hint">Ex: 15000 = R$ 150,00</div></div>
-
-            <div class="divider"></div>
-            <div class="form-section">Cliente</div>
-            <div class="fg"><label>name</label><input class="input" id="z1-name" placeholder="João Silva"></div>
-            <div class="fg"><label>email</label><input class="input" id="z1-email" type="email" placeholder="joao@email.com"></div>
-            <div class="fg"><label>phone_number</label><input class="input" id="z1-tel" placeholder="21999999999"></div>
-            <div class="fg"><label>document <span style="color:var(--text3)">(CPF cliente)</span></label><input class="input" id="z1-doc" placeholder="09115751031"><div class="input-hint">Opcional — se vazio usa o CPF do vendedor</div></div>
-            <div class="fg"><label>document <span style="color:var(--accent)">(CPF vendedor — fallback)</span></label><input class="input" id="z1-dfl" placeholder="Seu CPF sem pontos"></div>
-
-            <div class="btn-row">
-              <button class="btn btn-primary btn-lg" onclick="z1Submit()"><span id="z1-bi">⚡</span> <span id="z1-bt">Gerar cobrança PIX</span></button>
-            </div>
-            <div class="btn-row">
-              <button class="btn" onclick="z1Clear()">Limpar</button>
-            </div>
-          </div>
-        </div>
-        <div>
-          <div class="r-box" id="z1-resp">
-            <div class="r-header">
-              <span style="font-size:.65rem;color:var(--text2);letter-spacing:1px;">RESPONSE</span>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="r-status" id="z1-rs"></span>
-                <button class="btn" style="padding:3px 10px;font-size:.6rem;" onclick="cpPre('z1-pre')">Copiar</button>
-              </div>
-            </div>
-            <pre class="r-pre" id="z1-pre"></pre>
-          </div>
-          <div class="qr-box" id="z1-qr">
-            <div class="qr-title">⚡ PIX gerado com sucesso</div>
-            <div class="qr-canvas-wrap"><canvas id="z1-cv" width="180" height="180"></canvas></div>
-            <div class="pix-code" id="z1-bc" onclick="cpPix('z1-bc')" title="Clique para copiar">—</div>
-            <div class="qr-timer">⏱ Expira em <span class="timer-val" id="z1-timer">15:00</span></div>
-            <div class="btn-row" style="justify-content:center;margin-top:12px;">
-              <button class="btn btn-green" onclick="cpPix('z1-bc')">Copiar código PIX</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PARADISE PAGS -->
-    <div class="panel" id="panel-pp">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div>
-          <div class="card">
-            <div class="card-title">Paradise Pags <span class="badge badge-pp">PIX</span></div>
-
-            <div class="form-section">Autenticação</div>
-            <div class="fg"><label>X-API-Key</label><input class="input" id="pp-key" type="password" placeholder="sk_sua_chave_secreta"><div class="input-hint">Portal Paradise → Configurações e API</div></div>
-
-            <div class="divider"></div>
-            <div class="form-section">Cobrança</div>
-            <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="pp-amt" type="number" placeholder="1000"><div class="input-hint">Ex: 1000 = R$ 10,00</div></div>
-            <div class="fg"><label>description</label><input class="input" id="pp-desc" placeholder="Produto Teste"></div>
-            <div class="fg"><label>reference</label><input class="input" id="pp-ref" placeholder="REF-12345"><div class="input-hint">Seu identificador único para a transação</div></div>
-            <div class="fg"><label>productHash <span style="color:var(--text3)">(opcional)</span></label><input class="input" id="pp-prod" placeholder="hash_do_produto"></div>
-
-            <div class="divider"></div>
-            <div class="form-section">Cliente</div>
-            <div class="fg"><label>name</label><input class="input" id="pp-name" placeholder="João da Silva"></div>
-            <div class="fg"><label>email</label><input class="input" id="pp-email" type="email" placeholder="joao@teste.com"></div>
-            <div class="fg"><label>phone</label><input class="input" id="pp-tel" placeholder="11999999999"></div>
-            <div class="fg"><label>document <span style="color:var(--text3)">(CPF cliente)</span></label><input class="input" id="pp-doc" placeholder="05531510101"><div class="input-hint">Opcional — se vazio usa o CPF do vendedor</div></div>
-            <div class="fg"><label>document <span style="color:var(--accent)">(CPF vendedor — fallback)</span></label><input class="input" id="pp-dfl" placeholder="Seu CPF sem pontos"></div>
-
-            <div class="btn-row">
-              <button class="btn btn-primary btn-lg" onclick="ppSubmit()"><span id="pp-bi">⚡</span> <span id="pp-bt">Gerar cobrança PIX</span></button>
-            </div>
-            <div class="btn-row">
-              <button class="btn" onclick="ppClear()">Limpar</button>
-            </div>
-          </div>
-        </div>
-        <div>
-          <div class="r-box" id="pp-resp">
-            <div class="r-header">
-              <span style="font-size:.65rem;color:var(--text2);letter-spacing:1px;">RESPONSE</span>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="r-status" id="pp-rs"></span>
-                <button class="btn" style="padding:3px 10px;font-size:.6rem;" onclick="cpPre('pp-pre')">Copiar</button>
-              </div>
-            </div>
-            <pre class="r-pre" id="pp-pre"></pre>
-          </div>
-          <div class="qr-box" id="pp-qr">
-            <div class="qr-title">⚡ PIX gerado com sucesso</div>
-            <div class="qr-canvas-wrap"><canvas id="pp-cv" width="180" height="180"></canvas></div>
-            <div class="pix-code" id="pp-bc" onclick="cpPix('pp-bc')" title="Clique para copiar">—</div>
-            <div class="qr-timer">⏱ Expira em <span class="timer-val" id="pp-timer">15:00</span></div>
-            <div class="btn-row" style="justify-content:center;margin-top:12px;">
-              <button class="btn btn-green" onclick="cpPix('pp-bc')">Copiar código PIX</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- WEBHOOKS -->
     <div class="panel" id="panel-webhooks">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -788,12 +675,6 @@ canvas{display:block;}
   <div class="mob-nav">
     <button class="mob-item active" id="mob-dashboard" onclick="go('dashboard',null);setMobActive('mob-dashboard')">
       <span class="mob-item-icon">◈</span><span class="mob-item-label">Dashboard</span>
-    </button>
-    <button class="mob-item" id="mob-z1" onclick="go('z1',null);setMobActive('mob-z1')">
-      <span class="mob-item-icon" style="color:var(--z1)">◉</span><span class="mob-item-label">Zero One</span>
-    </button>
-    <button class="mob-item" id="mob-pp" onclick="go('pp',null);setMobActive('mob-pp')">
-      <span class="mob-item-icon" style="color:var(--pp)">◉</span><span class="mob-item-label">Paradise</span>
     </button>
     <button class="mob-item" id="mob-webhooks" onclick="go('webhooks',null);setMobActive('mob-webhooks')">
       <span class="mob-item-icon">⚡</span><span class="mob-item-label">Webhook</span>
