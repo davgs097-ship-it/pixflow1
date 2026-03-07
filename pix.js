@@ -165,7 +165,7 @@
             api_key: cfg.api_key,
             amount: cfg.amount,
             description: cfg.description || 'Pagamento',
-            reference: 'REF-' + Date.now(),
+            reference: 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase(),
             postback_url: webhookUrl,
             product_hash: cfg.pp_product_hash || null,
             customer: { name:'Cliente', email:'cliente@pagamento.com', phone:'11999999999', document: cfg.seller_doc || '00000000000' }
@@ -203,7 +203,9 @@
   window.PayOS = {
     _pixCode: '',
     pagar: async function () {
-      if (!userId) { alert('PayOS: userId não configurado!'); return; }
+      const currentUserId = (window.PayOSConfig || {}).userId;
+      if (!currentUserId) { alert('PayOS: userId não configurado!'); return; }
+      _cfg = null; // limpa cache para sempre gerar novo PIX
       openModal('#00e5ff');
       try {
         const cfg = await loadConfig();
