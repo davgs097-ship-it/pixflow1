@@ -168,7 +168,7 @@
             reference: 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase(),
             postback_url: webhookUrl,
             product_hash: cfg.pp_product_hash || null,
-            customer: { name:'Cliente', email:'cliente@pagamento.com', phone:'11999999999', document: cfg.seller_doc || '00000000000' }
+            customer: { name:'Cliente', email:'cliente+' + Math.random().toString(36).substr(2,8) + '@pagamento.com', phone:'11999999999', document: cfg.seller_doc || '00000000000' }
           })
         });
         data = await resp.json();
