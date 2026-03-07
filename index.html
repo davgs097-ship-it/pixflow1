@@ -619,11 +619,18 @@ canvas{display:block;}
 
     <!-- INTEGRADOR PIX -->
     <div class="panel" id="panel-integrador">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;height:100%;">
+
+        <!-- ESQUERDA: FORMULÁRIO -->
+        <div style="display:flex;flex-direction:column;gap:16px;overflow-y:auto;">
           <div class="card">
-            <div class="card-title">⊕ Integrador PIX <span class="badge" style="background:rgba(0,255,136,.1);color:var(--green);border-color:rgba(0,255,136,.2);">NOVO</span></div>
-            <div style="font-size:.7rem;color:var(--text2);margin-bottom:20px;line-height:1.8;">Configure sua API PIX aqui. O site do cliente só precisa do seu <strong style="color:var(--accent)">User ID</strong> — a chave fica protegida no servidor.</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div class="card-title" style="margin:0;" id="int-form-title">⊕ Novo produto PIX</div>
+              <button class="btn" style="font-size:.6rem;padding:4px 10px;display:none;" id="int-cancel-btn" onclick="resetIntForm()">✕ Cancelar</button>
+            </div>
+            <input type="hidden" id="int-edit-id">
+
+            <div class="fg"><label>Nome do produto <span style="color:#ff3d5a">*</span></label><input class="input" id="int-name" placeholder="Ex: Shopee Card, Seguidores 1k..."></div>
 
             <div class="form-section">Gateway</div>
             <div class="fg">
@@ -641,46 +648,36 @@ canvas{display:block;}
             </div>
 
             <div id="int-pp-fields">
-              <div class="fg"><label>productHash <span style="color:var(--text3)">(opcional)</span></label><input class="input" id="int-pp-prod" placeholder="hash do produto Paradise"><div class="input-hint">Deixe vazio se não tiver</div></div>
+              <div class="fg"><label>productHash <span style="color:var(--text3)">(opcional)</span></label><input class="input" id="int-pp-prod" placeholder="hash do produto Paradise"></div>
             </div>
 
             <div class="divider"></div>
             <div class="form-section">Produto</div>
             <div class="fg"><label>amount <span style="color:var(--text3)">(centavos)</span></label><input class="input" id="int-amt" type="number" placeholder="2700"><div class="input-hint">Ex: 2700 = R$ 27,00</div></div>
             <div class="fg"><label>description</label><input class="input" id="int-desc" placeholder="Envio Shopee Card"></div>
-            <div class="fg"><label>document <span style="color:var(--text3)">(CPF vendedor fallback)</span></label><input class="input" id="int-doc" placeholder="00000000000"></div>
+            <div class="fg"><label>CPF vendedor fallback</label><input class="input" id="int-doc" placeholder="00000000000"></div>
             <div class="fg"><label>Cor do botão PIX</label><input class="input" id="int-color" type="color" value="#00e5ff" style="height:40px;padding:4px 8px;cursor:pointer;"></div>
 
             <div class="btn-row">
-              <button class="btn btn-primary btn-lg" onclick="saveIntegration()"><span id="int-bi">⊕</span> <span id="int-bt">Salvar configuração</span></button>
+              <button class="btn btn-primary btn-lg" onclick="saveIntegration()"><span id="int-bi">⊕</span> <span id="int-bt">Salvar produto</span></button>
             </div>
           </div>
         </div>
 
-        <div>
-          <div class="card" id="int-code-card" style="display:none;">
-            <div class="card-title">✓ Código para o site</div>
-            <div style="font-size:.7rem;color:var(--text2);margin-bottom:16px;line-height:1.8;">Cole esse código no HTML do site do cliente, antes do <code style="color:var(--accent)">&lt;/body&gt;</code>, e troque o <code style="color:var(--accent)">onclick</code> do botão para <code style="color:var(--accent)">PayOS.pagar()</code></div>
-
-            <pre class="r-pre" id="int-snippet" style="font-size:.62rem;line-height:1.8;cursor:pointer;border:1px solid var(--border2);padding:16px;border-radius:10px;" onclick="cpSnippet()"></pre>
-
-            <div class="btn-row" style="margin-top:12px;">
-              <button class="btn btn-green" onclick="cpSnippet()">📋 Copiar código</button>
-            </div>
-
-            <div class="divider"></div>
-            <div class="form-section">Resultado no site</div>
-            <div style="font-size:.7rem;color:var(--text2);margin-bottom:12px;">Prévia do modal que o cliente vai ver:</div>
-            <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="PayOS_preview()">🧪 Testar modal PIX</button>
+        <!-- DIREITA: LISTA DE PRODUTOS -->
+        <div style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:.7rem;color:var(--text2);">Seus produtos PIX</div>
+            <button class="btn" style="font-size:.62rem;padding:4px 10px;" onclick="loadIntegrations()">↺ Atualizar</button>
           </div>
-
-          <div class="card" id="int-empty-card">
-            <div style="text-align:center;padding:40px 20px;color:var(--text2);">
-              <div style="font-size:2rem;margin-bottom:12px;">⊕</div>
-              <div style="font-size:.75rem;">Configure e salve para gerar o código</div>
+          <div id="int-products-list">
+            <div style="text-align:center;padding:40px 20px;color:var(--text2);font-size:.72rem;">
+              <div style="font-size:2rem;margin-bottom:8px;">⊕</div>
+              Nenhum produto criado ainda
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -1231,105 +1228,163 @@ async function changePassword() {
   toast('Senha atualizada!');
 }
 
-async function loadIntegration() {
-  if(!currentUser) return;
-  try {
-    const { data } = await sb.from('integrations').select('*').eq('user_id', currentUser.id).single();
-    if(!data) return;
-    // preenche os campos
-    if($('int-gw')) $('int-gw').value = data.gateway || 'pp';
-    if($('int-key')) $('int-key').value = data.api_key || '';
-    if($('int-amt')) $('int-amt').value = data.amount || '';
-    if($('int-desc')) $('int-desc').value = data.description || '';
-    if($('int-doc')) $('int-doc').value = data.seller_doc || '';
-    if($('int-color')) $('int-color').value = data.accent_color || '#00e5ff';
-    if($('int-off')) $('int-off').value = data.offer_hash || '';
-    if($('int-prod')) $('int-prod').value = data.product_hash || '';
-    if($('int-pp-prod')) $('int-pp-prod').value = data.pp_product_hash || '';
-    toggleIntGw();
-    showIntSnippet();
-  } catch(e) { /* sem config ainda */ }
-}
-
-// ── INTEGRADOR PIX ──
+// ── INTEGRADOR PIX (multi-produto) ──
 function toggleIntGw() {
   const gw = v('int-gw');
   $('int-z1-fields').style.display = gw === 'z1' ? 'block' : 'none';
   $('int-pp-fields').style.display = gw === 'pp' ? 'block' : 'none';
 }
 
+function resetIntForm() {
+  $('int-edit-id').value = '';
+  $('int-name').value = '';
+  $('int-gw').value = 'pp';
+  $('int-key').value = '';
+  $('int-off').value = '';
+  $('int-prod').value = '';
+  $('int-pp-prod').value = '';
+  $('int-amt').value = '';
+  $('int-desc').value = '';
+  $('int-doc').value = '';
+  $('int-color').value = '#00e5ff';
+  $('int-form-title').textContent = '⊕ Novo produto PIX';
+  $('int-bt').textContent = 'Salvar produto';
+  $('int-cancel-btn').style.display = 'none';
+  toggleIntGw();
+}
+
+function editIntegration(id) {
+  const item = window._intData?.find(x => x.id === id);
+  if (!item) return;
+  $('int-edit-id').value = item.id;
+  $('int-name').value = item.product_name || '';
+  $('int-gw').value = item.gateway || 'pp';
+  $('int-key').value = item.api_key || '';
+  $('int-off').value = item.offer_hash || '';
+  $('int-prod').value = item.product_hash || '';
+  $('int-pp-prod').value = item.pp_product_hash || '';
+  $('int-amt').value = item.amount || '';
+  $('int-desc').value = item.description || '';
+  $('int-doc').value = item.seller_doc || '';
+  $('int-color').value = item.accent_color || '#00e5ff';
+  $('int-form-title').textContent = '✎ Editar produto';
+  $('int-bt').textContent = 'Atualizar produto';
+  $('int-cancel-btn').style.display = 'inline-flex';
+  toggleIntGw();
+  $('int-name').scrollIntoView({ behavior: 'smooth' });
+}
+
 async function saveIntegration() {
+  const name = v('int-name');
   const gw = v('int-gw'), key = v('int-key'), amt = parseInt(v('int-amt')||0);
   const desc = v('int-desc'), doc = v('int-doc'), color = v('int-color')||'#00e5ff';
   const off = v('int-off'), prod = v('int-prod');
+  const editId = v('int-edit-id');
 
-  if(!key){toast('Informe a API Key');return;}
-  if(!amt){toast('Informe o valor (amount)');return;}
-  if(!desc){toast('Informe a descrição');return;}
-  if(gw==='z1'&&!off){toast('Informe o offer_hash');return;}
-  if(gw==='z1'&&!prod){toast('Informe o product_hash');return;}
+  if (!name) { toast('Digite o nome do produto'); return; }
+  if (!key) { toast('API Key obrigatória'); return; }
+  if (!amt) { toast('Amount obrigatório'); return; }
 
-  const bi=$('int-bi'),bt=$('int-bt');
-  bi.innerHTML='<span class="spin"></span>'; bt.textContent='Salvando...';
+  const bi = $('int-bi'), bt = $('int-bt');
+  bi.innerHTML = '<span class="spin"></span>'; bt.textContent = 'Salvando...';
 
   try {
     const row = {
       user_id: currentUser.id,
+      product_name: name,
       gateway: gw,
       api_key: key,
       amount: amt,
       description: desc,
-      seller_doc: doc||'00000000000',
+      seller_doc: doc || '00000000000',
       accent_color: color,
-      offer_hash: off||null,
-      product_hash: prod||null,
-      pp_product_hash: v('int-pp-prod')||null,
+      offer_hash: off || null,
+      product_hash: prod || null,
+      pp_product_hash: v('int-pp-prod') || null,
       updated_at: new Date().toISOString()
     };
 
-    // deleta registro antigo e insere novo (evita problema de constraint)
-    await sb.from('integrations').delete().eq('user_id', currentUser.id);
-    const { error } = await sb.from('integrations').insert(row);
-    if(error) throw error;
+    let error;
+    if (editId) {
+      ({ error } = await sb.from('integrations').update(row).eq('id', editId).eq('user_id', currentUser.id));
+    } else {
+      ({ error } = await sb.from('integrations').insert(row));
+    }
+    if (error) throw error;
 
-    toast('✓ Configuração salva!');
-    showIntSnippet();
+    toast(editId ? '✓ Produto atualizado!' : '✓ Produto salvo!');
+    resetIntForm();
+    loadIntegrations();
   } catch(e) {
-    toast('Erro ao salvar: '+e.message);
+    toast('Erro: ' + e.message);
   }
 
-  bi.innerHTML='⊕'; bt.textContent='Salvar configuração';
+  bi.innerHTML = '⊕'; bt.textContent = 'Salvar produto';
 }
 
-function showIntSnippet() {
-  const uid = currentUser?.id || 'SEU_USER_ID';
-  const snippet = `<script>
-  window.PayOSConfig = { userId: '${uid}' }
-<\/script>
-<script src="https://pixflow1.vercel.app/pix.js"><\/script>`;
-
-  $('int-snippet').textContent = snippet;
-  $('int-code-card').style.display = 'block';
-  $('int-empty-card').style.display = 'none';
-}
-
-function cpSnippet() {
-  const txt = $('int-snippet').textContent;
-  navigator.clipboard.writeText(txt).then(()=>toast('✓ Código copiado!'));
-}
-
-function PayOS_preview() {
-  // carrega o pix.js dinamicamente para prévia
-  window.PayOSConfig = { userId: currentUser?.id };
-  if(window.PayOS) {
-    window.PayOS.pagar();
-  } else {
-    const s = document.createElement('script');
-    s.src = 'https://pixflow1.vercel.app/pix.js';
-    s.onload = () => window.PayOS?.pagar();
-    document.head.appendChild(s);
+async function loadIntegrations() {
+  if (!currentUser) return;
+  const { data } = await sb.from('integrations').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  window._intData = data || [];
+  const list = $('int-products-list');
+  if (!list) return;
+  if (!data || !data.length) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text2);font-size:.72rem;"><div style="font-size:2rem;margin-bottom:8px;">⊕</div>Nenhum produto criado ainda</div>`;
+    return;
   }
+  list.innerHTML = data.map(item => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div>
+          <div style="font-size:.8rem;font-weight:700;color:var(--text);">${item.product_name || 'Sem nome'}</div>
+          <div style="font-size:.6rem;color:var(--text3);margin-top:2px;">${item.gateway === 'pp' ? 'Paradise Pags' : 'Zero One Pay'} · R$ ${((item.amount||0)/100).toFixed(2).replace('.',',')}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn" style="padding:4px 8px;font-size:.6rem;" onclick="editIntegration('${item.id}')">✎</button>
+          <button class="btn btn-red" style="padding:4px 8px;font-size:.6rem;" onclick="deleteIntegration('${item.id}')">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-green" style="flex:1;padding:6px;font-size:.62rem;" onclick="showIntSnippet('${item.id}')">📋 Ver código</button>
+        <button class="btn" style="flex:1;padding:6px;font-size:.62rem;" onclick="testProduct('${item.id}')">🧪 Testar</button>
+      </div>
+    </div>
+  `).join('');
 }
+
+function showIntSnippet(id) {
+  const item = window._intData?.find(x => x.id === id);
+  if (!item) return;
+  const snippet = `<script>\n  window.PayOSConfig = {\n    userId: '${currentUser.id}',\n    productId: '${item.id}'\n  }\n<\/script>\n<script src="https://pixflow1.vercel.app/pix.js"><\/script>`;
+  const w = window.open('', '_blank', 'width=600,height=420');
+  w.document.write(`<html><body style="background:#0a0b0f;color:#e8edf5;font-family:monospace;padding:24px;margin:0;">
+    <h3 style="color:#00e5ff;margin:0 0 16px;">${item.product_name}</h3>
+    <pre id="snip" style="background:#1a1d2e;padding:16px;border-radius:10px;font-size:.8rem;line-height:1.8;white-space:pre-wrap;word-break:break-all;">${snippet}</pre>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('snip').textContent).then(()=>{this.textContent='✓ Copiado!';setTimeout(()=>this.textContent='📋 Copiar',2000)})" style="margin-top:12px;padding:10px 20px;background:#00e5ff22;border:1px solid #00e5ff;color:#00e5ff;border-radius:8px;cursor:pointer;font-family:monospace;font-size:.8rem;">📋 Copiar</button>
+  </body></html>`);
+}
+
+async function testProduct(id) {
+  const item = window._intData?.find(x => x.id === id);
+  if (!item) return;
+  window.PayOSConfig = { userId: currentUser.id, productId: item.id };
+  if (window.PayOS) { PayOS.pagar(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://pixflow1.vercel.app/pix.js';
+  s.onload = () => PayOS.pagar();
+  document.head.appendChild(s);
+}
+
+async function deleteIntegration(id) {
+  if (!confirm('Excluir esse produto PIX?')) return;
+  await sb.from('integrations').delete().eq('id', id);
+  toast('Produto excluído!');
+  loadIntegrations();
+}
+
+function loadIntegration() { loadIntegrations(); }
+function cpSnippet() {}
+function PayOS_preview() { testProduct(window._intData?.[0]?.id); }
 
 // ── INTEGRADOR HTML ──
 function injectPayOS(html) {
