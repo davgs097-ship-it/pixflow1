@@ -382,10 +382,6 @@ canvas{display:block;}
     <a class="nav-item" onclick="go('webhooks',this)"><span class="nav-icon">⚡</span> Webhooks</a>
   </div>
   <div class="nav-section">
-    <div class="nav-label">Gateways PIX</div>
-
-  </div>
-  <div class="nav-section">
     <div class="nav-label">Ferramentas</div>
     <a class="nav-item" onclick="go('integrador',this)"><span class="nav-icon" style="color:var(--green)">⊕</span> Integrador PIX</a>
     <a class="nav-item" onclick="go('chat',this)"><span class="nav-icon" style="color:var(--accent)">◎</span> Integrador Sites</a>
@@ -393,12 +389,6 @@ canvas{display:block;}
   <div class="nav-section">
     <div class="nav-label">Conta</div>
     <a class="nav-item" onclick="go('perfil',this)"><span class="nav-icon">▣</span> Perfil</a>
-  </div>
-  <div class="sidebar-bottom">
-    <div class="gw-status">
-      <div class="gw-pill"><span class="gw-dot" style="background:var(--z1);box-shadow:0 0 6px var(--z1)"></span><span class="gw-name">Zero One Pay</span><span class="gw-ok">● online</span></div>
-      <div class="gw-pill"><span class="gw-dot" style="background:var(--pp);box-shadow:0 0 6px var(--pp)"></span><span class="gw-name">Paradise Pags</span><span class="gw-ok">● online</span></div>
-    </div>
   </div>
 </aside>
 
@@ -595,6 +585,14 @@ canvas{display:block;}
             <div class="fg">
               <label>Nome do site</label>
               <input class="input" id="site-name" placeholder="Ex: Loja Shopee, Site Sedex...">
+            </div>
+
+            <div class="fg">
+              <label>API PIX <span style="color:#ff3d5a">*</span></label>
+              <select class="input" id="site-product-id">
+                <option value="">Carregando produtos...</option>
+              </select>
+              <div class="input-hint">Escolha qual produto PIX será usado neste site</div>
             </div>
 
             <div class="fg" style="flex:1;display:flex;flex-direction:column;">
@@ -1209,6 +1207,7 @@ async function loadIntegrations() {
   window._intData = data || [];
   const list = $('int-products-list');
   if (!list) return;
+  populateSiteProductSelect();
   if (!data || !data.length) {
     list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text2);font-size:.72rem;"><div style="font-size:2rem;margin-bottom:8px;">⊕</div>Nenhum produto criado ainda</div>`;
     return;
@@ -1268,9 +1267,12 @@ function cpSnippet() {}
 function PayOS_preview() { testProduct(window._intData?.[0]?.id); }
 
 // ── INTEGRADOR HTML ──
-function injectPayOS(html) {
+function injectPayOS(html, productId) {
   const userId = currentUser?.id || '';
-  const snippet = `\n<!-- PayOS PIX -->\n<scr`+`ipt>\n  window.PayOSConfig = { userId: '${userId}' }\n</scr`+`ipt>\n<scr`+`ipt src="https://pixflow1.vercel.app/pix.js"></scr`+`ipt>`;
+  const configLine = productId
+    ? `  window.PayOSConfig = { userId: '${userId}', productId: '${productId}' }`
+    : `  window.PayOSConfig = { userId: '${userId}' }`;
+  const snippet = `\n<!-- PayOS PIX -->\n<scr`+`ipt>\n${configLine}\n</scr`+`ipt>\n<scr`+`ipt src="https://pixflow1.vercel.app/pix.js"></scr`+`ipt>`;
 
   let result = html;
 
@@ -1312,15 +1314,16 @@ function injectPayOS(html) {
 async function integrarSite() {
   const name = v('site-name') || 'Site sem nome';
   const html = v('site-html');
+  const productId = v('site-product-id');
   if(!html.trim()){ toast('Cole o HTML do site'); return; }
+  if(!productId){ toast('Selecione uma API PIX'); return; }
 
   const icon=$('int-site-icon'), txt=$('int-site-txt');
   icon.innerHTML='<span class="spin"></span>'; txt.textContent='Integrando...';
 
   try {
-    const integrated = injectPayOS(html);
+    const integrated = injectPayOS(html, productId);
 
-    // salva no Supabase
     const { error } = await sb.from('sites').insert({
       user_id: currentUser.id,
       name,
@@ -1330,7 +1333,6 @@ async function integrarSite() {
 
     if(error) throw error;
 
-    // limpa campos
     $('site-name').value = '';
     $('site-html').value = '';
 
@@ -1342,6 +1344,18 @@ async function integrarSite() {
   }
 
   icon.innerHTML='⚡'; txt.textContent='Integrar PIX';
+}
+
+function populateSiteProductSelect() {
+  const sel = $('site-product-id');
+  if (!sel) return;
+  const data = window._intData || [];
+  if (!data.length) {
+    sel.innerHTML = '<option value="">Nenhum produto criado ainda</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Selecione um produto...</option>' +
+    data.map(p => `<option value="${p.id}">${p.product_name || 'Sem nome'} — ${p.gateway === 'pp' ? 'Paradise' : 'Zero One'} · R$ ${((p.amount||0)/100).toFixed(2).replace('.',',')}</option>`).join('');
 }
 
 async function loadSites() {
