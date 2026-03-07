@@ -164,6 +164,7 @@
             description: cfg.description || 'Pagamento',
             reference: 'REF-' + Date.now(),
             postback_url: webhookUrl,
+            product_hash: cfg.pp_product_hash || null,
             customer: { name:'Cliente', email:'cliente@pagamento.com', phone:'11999999999', document: cfg.seller_doc || '00000000000' }
           })
         });
