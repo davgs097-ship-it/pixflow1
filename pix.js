@@ -58,10 +58,12 @@
 
   async function loadConfig() {
     if (_cfg) return _cfg;
+    const userId = (window.PayOSConfig || {}).userId;
+    const productId = (window.PayOSConfig || {}).productId;
     const resp = await fetch(`${SUPABASE_FN}/get-pix-config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId })
+      body: JSON.stringify({ user_id: userId, product_id: productId })
     });
     if (!resp.ok) throw new Error('Configuração não encontrada');
     _cfg = await resp.json();
