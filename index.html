@@ -525,7 +525,7 @@ canvas{display:block;}
             </div>
 
             <div id="int-pp-fields">
-              <div class="fg"><label>productHash <span style="color:var(--text3)">(opcional)</span></label><input class="input" id="int-pp-prod" placeholder="hash do produto Paradise"></div>
+              <div class="fg"><label>productHash <span style="color:#ff3d5a">*</span></label><input class="input" id="int-pp-prod" placeholder="hash do produto Paradise"></div>
             </div>
 
             <div class="divider"></div>
@@ -598,16 +598,11 @@ canvas{display:block;}
 
             <div class="fg">
               <label>Modo de integração</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;" id="int-mode-selector">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;" id="int-mode-selector">
                 <div class="int-mode-opt selected" onclick="selectIntMode('modal', this)" id="mode-modal" style="background:rgba(0,229,255,.1);border:1.5px solid var(--accent);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s;">
                   <div style="font-size:1.1rem;margin-bottom:4px;">🪟</div>
                   <div style="font-size:.62rem;font-weight:700;color:var(--accent);">Modal</div>
                   <div style="font-size:.55rem;color:var(--text2);margin-top:2px;">Popup por cima</div>
-                </div>
-                <div class="int-mode-opt" onclick="selectIntMode('inline', this)" id="mode-inline" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s;">
-                  <div style="font-size:1.1rem;margin-bottom:4px;">📄</div>
-                  <div style="font-size:.62rem;font-weight:700;color:var(--text2);">Inline</div>
-                  <div style="font-size:.55rem;color:var(--text2);margin-top:2px;">Na própria página</div>
                 </div>
                 <div class="int-mode-opt" onclick="selectIntMode('page', this)" id="mode-page" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s;">
                   <div style="font-size:1.1rem;margin-bottom:4px;">🔗</div>
@@ -1194,6 +1189,7 @@ async function saveIntegration() {
   if (!name) { toast('Digite o nome do produto'); return; }
   if (!key) { toast('API Key obrigatória'); return; }
   if (!amt) { toast('Amount obrigatório'); return; }
+  if (gw === 'pp' && !v('int-pp-prod')) { toast('productHash é obrigatório para Paradise Pags'); return; }
 
   const bi = $('int-bi'), bt = $('int-bt');
   bi.innerHTML = '<span class="spin"></span>'; bt.textContent = 'Salvando...';
