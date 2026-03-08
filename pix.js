@@ -308,32 +308,63 @@
     const userId = (window.PayOSConfig || {}).userId;
     if (!userId) return;
 
-    container.innerHTML = `<div style="font-family:-apple-system,sans-serif;background:#fff;border-radius:16px;padding:24px;max-width:420px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center;"><div style="font-size:.8rem;color:#aaa;margin-bottom:16px;">Carregando pagamento...</div><div style="display:inline-block;width:28px;height:28px;border:3px solid #eee;border-top-color:#e11d48;border-radius:50%;animation:payos-rot .7s linear infinite;"></div><style>@keyframes payos-rot{to{transform:rotate(360deg)}}</style></div>`;
-
+    // Busca config primeiro (silencioso)
+    let cfg;
     try {
       const cfgRes = await fetch(`${SUPABASE_FN}/get-pix-config`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ user_id: userId, product_id: (window.PayOSConfig||{}).productId })
       });
-      const cfg = await cfgRes.json();
-      const accent = cfg.accent_color || '#e11d48';
+      cfg = await cfgRes.json();
+    } catch(e) { return; }
+
+    const accent = cfg.accent_color || '#e11d48';
+
+    // Fase 1: mostra botão "Gerar Pagamento"
+    function showGerarBtn() {
+      container.innerHTML = `
+        <div style="font-family:-apple-system,sans-serif;max-width:420px;margin:0 auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#f8f8f8;border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+            <span style="font-size:.8rem;color:#888;">Valor PIX:</span>
+            <span style="font-size:1.1rem;font-weight:800;color:#111;">R$ ${(cfg.amount/100).toFixed(2).replace('.',',')}</span>
+          </div>
+          <button id="payos-gerar-btn" style="width:100%;padding:15px;border-radius:12px;border:none;background:${accent};color:#fff;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            ☑ Gerar Pagamento
+          </button>
+        </div>`;
+
+      document.getElementById('payos-gerar-btn').onclick = gerarPix;
+    }
+
+    // Fase 2: gera PIX e mostra QR Code
+    async function gerarPix() {
+      const btn = document.getElementById('payos-gerar-btn');
+      if (btn) { btn.innerHTML = '<span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:payos-rot .7s linear infinite;"></span> Gerando...'; btn.disabled = true; }
+
       const webhookUrl = `${SUPABASE_FN}/webhook?user=${userId}`;
       const reference = 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
 
       let pixCode;
-      if (cfg.gateway === 'pp') {
-        const r = await fetch(`${SUPABASE_FN}/pix-pp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ api_key:cfg.api_key, amount:cfg.amount, description:cfg.description||'Pagamento', reference, postback_url:webhookUrl, product_hash:cfg.pp_product_hash||null, customer:{name:'Cliente',email:'cliente+'+Math.random().toString(36).substr(2,8)+'@pagamento.com',phone:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
-        const d = await r.json(); pixCode = d.qr_code;
-      } else {
-        const r = await fetch(`${SUPABASE_FN}/pix-z1`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ api_token:cfg.api_key, amount:cfg.amount, offer_hash:cfg.offer_hash, product_hash:cfg.product_hash, description:cfg.description||'Pagamento', webhook_url:webhookUrl, customer:{name:'Cliente',email:'cliente@pagamento.com',phone_number:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
-        const d = await r.json(); pixCode = d._qr_code || d.pix?.pix_qr_code || d.pix?.qr_code;
-      }
+      try {
+        if (cfg.gateway === 'pp') {
+          const r = await fetch(`${SUPABASE_FN}/pix-pp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ api_key:cfg.api_key, amount:cfg.amount, description:cfg.description||'Pagamento', reference, postback_url:webhookUrl, product_hash:cfg.pp_product_hash||null, customer:{name:'Cliente',email:'cliente+'+Math.random().toString(36).substr(2,8)+'@pagamento.com',phone:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
+          const d = await r.json(); pixCode = d.qr_code;
+        } else {
+          const r = await fetch(`${SUPABASE_FN}/pix-z1`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ api_token:cfg.api_key, amount:cfg.amount, offer_hash:cfg.offer_hash, product_hash:cfg.product_hash, description:cfg.description||'Pagamento', webhook_url:webhookUrl, customer:{name:'Cliente',email:'cliente@pagamento.com',phone_number:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
+          const d = await r.json(); pixCode = d._qr_code || d.pix?.pix_qr_code || d.pix?.qr_code;
+        }
+      } catch(e) { pixCode = null; }
 
-      if (!pixCode) { container.innerHTML = '<p style="color:#ef4444;font-family:sans-serif;text-align:center;">Erro ao gerar PIX.</p>'; return; }
+      if (!pixCode) {
+        container.innerHTML = `<div style="font-family:-apple-system,sans-serif;max-width:420px;margin:0 auto;text-align:center;padding:16px;color:#ef4444;font-size:.8rem;">Erro ao gerar PIX. <span style="cursor:pointer;text-decoration:underline;" onclick="">Tentar novamente</span></div>`;
+        container.querySelector('span').onclick = showGerarBtn;
+        return;
+      }
 
       const qrId = 'payos-inline-qr-' + Date.now();
       container.innerHTML = `
-        <div style="font-family:-apple-system,sans-serif;background:#fff;border-radius:16px;padding:24px;max-width:420px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+        <style>@keyframes payos-rot{to{transform:rotate(360deg)}} @keyframes payos-fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}</style>
+        <div style="font-family:-apple-system,sans-serif;max-width:420px;margin:0 auto;animation:payos-fadein .3s ease;">
           <h3 style="font-size:1rem;font-weight:800;color:#111;text-align:center;margin-bottom:4px;">Escaneie o QR-code ou copie o código</h3>
           <p style="font-size:.72rem;color:#888;text-align:center;margin-bottom:16px;">${cfg.description||''}</p>
           <div style="background:#f8f8f8;border-radius:12px;padding:16px;display:flex;justify-content:center;margin-bottom:16px;" id="${qrId}"></div>
@@ -342,7 +373,7 @@
             <span style="font-size:1.1rem;font-weight:800;color:#111;">R$ ${(cfg.amount/100).toFixed(2).replace('.',',')}</span>
           </div>
           <div style="background:#f8f8f8;border-radius:10px;padding:10px 12px;font-size:.6rem;color:#555;word-break:break-all;margin-bottom:12px;">${pixCode.substring(0,80)}...</div>
-          <button id="payos-inline-copybtn" style="width:100%;padding:14px;border-radius:12px;border:none;background:${accent};color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;">📋 Copiar código PIX</button>
+          <button id="payos-inline-copybtn" style="width:100%;padding:14px;border-radius:12px;border:none;background:${accent};color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;">📋 Copiar código PIX</button>
           <div id="payos-inline-confirmed" style="display:none;text-align:center;padding:20px 0;">
             <div style="font-size:2.5rem;margin-bottom:8px;">✅</div>
             <div style="font-size:1rem;font-weight:800;color:#22c55e;">Pagamento confirmado!</div>
@@ -357,10 +388,11 @@
         });
       };
 
-      const drawInlineQR = () => new QRCode(document.getElementById(qrId), {text:pixCode,width:200,height:200,colorDark:'#000',colorLight:'#fff'});
-      if (window.QRCode) drawInlineQR();
-      else { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.onload=drawInlineQR; document.head.appendChild(s); }
+      const drawQR = () => new QRCode(document.getElementById(qrId), {text:pixCode,width:200,height:200,colorDark:'#000',colorLight:'#fff'});
+      if (window.QRCode) drawQR();
+      else { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.onload=drawQR; document.head.appendChild(s); }
 
+      // Polling confirmação
       const since = new Date().toISOString();
       const redirectUrl = cfg.redirect_url || null;
       const pollIv = setInterval(async () => {
@@ -370,7 +402,7 @@
           if (data && data.paid) {
             clearInterval(pollIv);
             const conf = document.getElementById('payos-inline-confirmed');
-            if (conf) { conf.style.display='block'; }
+            if (conf) conf.style.display = 'block';
             if (redirectUrl) {
               let c=3;
               const iv=setInterval(()=>{ c--; const el=document.getElementById('payos-inline-redir'); if(el) el.textContent=c; if(c<=0){clearInterval(iv);window.location.href=redirectUrl;} },1000);
@@ -378,10 +410,9 @@
           }
         } catch(e) {}
       }, 3000);
-
-    } catch(e) {
-      container.innerHTML = '<p style="color:#ef4444;font-family:sans-serif;text-align:center;">Erro ao carregar pagamento.</p>';
     }
+
+    showGerarBtn();
   })();
 
 })();
