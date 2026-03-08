@@ -1265,6 +1265,34 @@ async function loadIntegrations() {
   `).join('');
 }
 
+async function downloadPayPage(userId, productId) {
+  try {
+    const res = await fetch('https://pixflow1.vercel.app/pay.html');
+    let html = await res.text();
+    // Injeta userId e productId direto no HTML
+    html = html.replace(
+      "const params = new URLSearchParams(window.location.search);",
+      `const params = new URLSearchParams(window.location.search);`
+    );
+    html = html.replace(
+      "const userId = params.get('user');",
+      `const userId = params.get('user') || '${userId}';`
+    );
+    html = html.replace(
+      "const productId = params.get('product');",
+      `const productId = params.get('product') || '${productId}';`
+    );
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pagamento-pix.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) {
+    toast('Erro ao baixar página. Tente novamente.');
+  }
+}
+
 function showPayLink(id) {
   const uid = currentUser?.id || '';
   const url = `https://pixflow1.vercel.app/pay.html?user=${uid}&product=${id}`;
@@ -1280,6 +1308,7 @@ function showPayLink(id) {
       <div style="background:#050608;border:1px solid #1a1d2e;border-radius:8px;padding:12px;font-size:.65rem;color:#00e5ff;word-break:break-all;margin-bottom:12px;cursor:pointer;" onclick="navigator.clipboard.writeText('${url}');this.style.color='#00ff88';this.textContent='✓ Copiado!';">${url}</div>
       <button onclick="navigator.clipboard.writeText('${url}');this.textContent='✓ Copiado!';this.style.background='rgba(0,255,136,.15)';this.style.color='#00ff88';" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,229,255,.3);background:rgba(0,229,255,.1);color:#00e5ff;font-size:.8rem;font-weight:600;cursor:pointer;">📋 Copiar link</button>
       <button onclick="window.open('${url}','_blank')" style="width:100%;padding:12px;border-radius:8px;border:1px solid #1a1d2e;background:none;color:#6b7280;font-size:.75rem;cursor:pointer;margin-top:8px;">👁 Abrir prévia</button>
+      <button onclick="downloadPayPage('${uid}','${id}')" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.1);color:#00ff88;font-size:.75rem;cursor:pointer;margin-top:8px;">⬇ Baixar página HTML</button>
     </div>
   `;
   document.body.appendChild(popup);
