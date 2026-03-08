@@ -596,9 +596,37 @@ canvas{display:block;}
               <div class="input-hint">Escolha qual produto PIX será usado neste site</div>
             </div>
 
-            <div class="fg" style="flex:1;display:flex;flex-direction:column;">
+            <div class="fg">
+              <label>Modo de integração</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;" id="int-mode-selector">
+                <div class="int-mode-opt selected" onclick="selectIntMode('modal', this)" id="mode-modal" style="background:rgba(0,229,255,.1);border:1.5px solid var(--accent);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s;">
+                  <div style="font-size:1.1rem;margin-bottom:4px;">🪟</div>
+                  <div style="font-size:.62rem;font-weight:700;color:var(--accent);">Modal</div>
+                  <div style="font-size:.55rem;color:var(--text2);margin-top:2px;">Popup por cima</div>
+                </div>
+                <div class="int-mode-opt" onclick="selectIntMode('inline', this)" id="mode-inline" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s;">
+                  <div style="font-size:1.1rem;margin-bottom:4px;">📄</div>
+                  <div style="font-size:.62rem;font-weight:700;color:var(--text2);">Inline</div>
+                  <div style="font-size:.55rem;color:var(--text2);margin-top:2px;">Na própria página</div>
+                </div>
+                <div class="int-mode-opt" onclick="selectIntMode('page', this)" id="mode-page" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s;">
+                  <div style="font-size:1.1rem;margin-bottom:4px;">🔗</div>
+                  <div style="font-size:.62rem;font-weight:700;color:var(--text2);">Página</div>
+                  <div style="font-size:.55rem;color:var(--text2);margin-top:2px;">Link dedicado</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="fg" style="flex:1;display:flex;flex-direction:column;" id="site-html-wrap">
               <label>HTML do site</label>
               <textarea class="input" id="site-html" placeholder="Cole o HTML completo aqui..." style="flex:1;min-height:280px;resize:none;line-height:1.7;font-size:.65rem;"></textarea>
+            </div>
+
+            <!-- Modo página: mostra link direto -->
+            <div id="site-page-info" style="display:none;flex:1;flex-direction:column;gap:12px;justify-content:center;align-items:center;text-align:center;padding:32px 0;">
+              <div style="font-size:2.5rem;">🔗</div>
+              <div style="font-size:.8rem;font-weight:700;color:var(--text);">Link de Página Dedicada</div>
+              <div style="font-size:.7rem;color:var(--text2);line-height:1.7;">Selecione o produto e clique em "Gerar Link".<br>Compartilhe o link no TikTok, WhatsApp ou anúncios.</div>
             </div>
 
             <div class="btn-row" style="margin-top:12px;">
@@ -1293,83 +1321,115 @@ function cpSnippet() {}
 function PayOS_preview() { testProduct(window._intData?.[0]?.id); }
 
 // ── INTEGRADOR HTML ──
-function injectPayOS(html, productId) {
+let _intMode = 'modal';
+
+function selectIntMode(mode, el) {
+  _intMode = mode;
+  document.querySelectorAll('.int-mode-opt').forEach(o => {
+    o.style.background = 'var(--bg3)';
+    o.style.border = '1.5px solid var(--border)';
+    o.querySelectorAll('div').forEach((d,i) => { if(i===1) d.style.color='var(--text2)'; });
+  });
+  el.style.background = 'rgba(0,229,255,.1)';
+  el.style.border = '1.5px solid var(--accent)';
+  el.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+
+  if (mode === 'page') {
+    $('site-html-wrap').style.display = 'none';
+    $('site-page-info').style.display = 'flex';
+    $('int-site-txt').textContent = 'Gerar Link';
+    $('int-site-icon').textContent = '🔗';
+  } else {
+    $('site-html-wrap').style.display = 'flex';
+    $('site-page-info').style.display = 'none';
+    $('int-site-txt').textContent = 'Integrar PIX';
+    $('int-site-icon').textContent = '⚡';
+  }
+}
+
+function injectPayOS(html, productId, mode) {
   const userId = currentUser?.id || '';
+  mode = mode || 'modal';
+
+  if (mode === 'inline') {
+    // Injeta div inline + pix-inline.js
+    const configLine = `  window.PayOSConfig = { userId: '${userId}', productId: '${productId}', mode: 'inline', container: 'payos-inline' }`;
+    const snippet = `\n<!-- PayOS PIX Inline -->\n<div id="payos-inline"></div>\n<scr`+`ipt>\n${configLine}\n</scr`+`ipt>\n<scr`+`ipt src="https://pixflow1.vercel.app/pix.js"></scr`+`ipt>`;
+    const payWords = /pagar|comprar|finalizar|checkout|payment|pay|buy|adquirir|contratar|assinar|continuar|confirmar/i;
+    let result = html;
+    if(result.includes('</body>')) result = result.replace('</body>', snippet + '\n</body>');
+    else result = result + snippet;
+    // Remove onclick de botões de pagamento (inline não precisa de botão)
+    result = result.replace(/<button[^>]*>[\s\S]*?<\/button>/gi, (match) => {
+      if(payWords.test(match)) return match.replace(/onclick="[^"]*"/i,'').replace(/onclick='[^']*'/i,'');
+      return match;
+    });
+    return result;
+  }
+
+  // Modal (padrão)
   const configLine = productId
     ? `  window.PayOSConfig = { userId: '${userId}', productId: '${productId}' }`
     : `  window.PayOSConfig = { userId: '${userId}' }`;
   const snippet = `\n<!-- PayOS PIX -->\n<scr`+`ipt>\n${configLine}\n</scr`+`ipt>\n<scr`+`ipt src="https://pixflow1.vercel.app/pix.js"></scr`+`ipt>`;
-
   let result = html;
-
-  // injeta antes do </body> ou no final
-  if(result.includes('</body>')) {
-    result = result.replace('</body>', snippet + '\n</body>');
-  } else {
-    result = result + snippet;
-  }
-
-  // palavras que indicam botão de pagamento
+  if(result.includes('</body>')) result = result.replace('</body>', snippet + '\n</body>');
+  else result = result + snippet;
   const payWords = /pagar|comprar|finalizar|checkout|payment|pay|buy|adquirir|contratar|assinar|continuar|confirmar/i;
-
-  // troca onclick de botões de pagamento
   result = result.replace(/<button[^>]*>[\s\S]*?<\/button>/gi, (match) => {
     if(payWords.test(match)) {
-      let m = match.replace(/onclick="[^"]*"/i, 'onclick="PayOS.pagar()"');
-      m = m.replace(/onclick='[^']*'/i, "onclick=\"PayOS.pagar()\"");
-      if(!/onclick/i.test(m)) m = m.replace('<button', '<button onclick="PayOS.pagar()"');
+      let m = match.replace(/onclick="[^"]*"/i,'onclick="PayOS.pagar()"').replace(/onclick='[^']*'/i,"onclick=\"PayOS.pagar()\"");
+      if(!/onclick/i.test(m)) m = m.replace('<button','<button onclick="PayOS.pagar()"');
       return m;
     }
     return match;
   });
-
-  // troca href de links de pagamento
   result = result.replace(/<a[^>]*>[\s\S]*?<\/a>/gi, (match) => {
     if(payWords.test(match)) {
-      let m = match.replace(/href="[^"]*"/i, 'href="javascript:void(0)"');
-      m = m.replace(/onclick="[^"]*"/i, 'onclick="PayOS.pagar()"');
-      if(!/onclick/i.test(m)) m = m.replace('<a ', '<a onclick="PayOS.pagar()" ');
+      let m = match.replace(/href="[^"]*"/i,'href="javascript:void(0)"').replace(/onclick="[^"]*"/i,'onclick="PayOS.pagar()"');
+      if(!/onclick/i.test(m)) m = m.replace('<a ','<a onclick="PayOS.pagar()" ');
       return m;
     }
     return match;
   });
-
   return result;
 }
 
 async function integrarSite() {
   const name = v('site-name') || 'Site sem nome';
-  const html = v('site-html');
   const productId = v('site-product-id');
-  if(!html.trim()){ toast('Cole o HTML do site'); return; }
   if(!productId){ toast('Selecione uma API PIX'); return; }
+
+  // Modo página — só gera link
+  if (_intMode === 'page') {
+    showPayLink(productId);
+    return;
+  }
+
+  const html = v('site-html');
+  if(!html.trim()){ toast('Cole o HTML do site'); return; }
 
   const icon=$('int-site-icon'), txt=$('int-site-txt');
   icon.innerHTML='<span class="spin"></span>'; txt.textContent='Integrando...';
 
   try {
-    const integrated = injectPayOS(html, productId);
-
+    const integrated = injectPayOS(html, productId, _intMode);
     const { error } = await sb.from('sites').insert({
       user_id: currentUser.id,
-      name,
+      name: name + (_intMode !== 'modal' ? ` [${_intMode}]` : ''),
       html_original: html,
       html_integrado: integrated
     });
-
     if(error) throw error;
-
     $('site-name').value = '';
     $('site-html').value = '';
-
     toast('✓ Site integrado e salvo!');
     loadSites();
-
   } catch(e) {
     toast('Erro: ' + e.message);
   }
 
-  icon.innerHTML='⚡'; txt.textContent='Integrar PIX';
+  icon.textContent='⚡'; txt.textContent='Integrar PIX';
 }
 
 function populateSiteProductSelect() {
