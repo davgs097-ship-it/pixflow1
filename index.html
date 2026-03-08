@@ -1352,16 +1352,19 @@ function injectPayOS(html, productId, mode) {
   mode = mode || 'modal';
 
   if (mode === 'inline') {
-    // Injeta div inline + pix-inline.js
-    const configLine = `  window.PayOSConfig = { userId: '${userId}', productId: '${productId}', mode: 'inline', container: 'payos-inline' }`;
-    const snippet = `\n<!-- PayOS PIX Inline -->\n<div id="payos-inline"></div>\n<scr`+`ipt>\n${configLine}\n</scr`+`ipt>\n<scr`+`ipt src="https://pixflow1.vercel.app/pix.js"></scr`+`ipt>`;
+    const configLine = `  window.PayOSConfig = { userId: '${userId}', productId: '${productId}', mode: 'inline' }`;
+    const snippet = `\n<!-- PayOS PIX Inline -->\n<scr`+`ipt>\n${configLine}\n</scr`+`ipt>\n<scr`+`ipt src="https://pixflow1.vercel.app/pix.js"></scr`+`ipt>`;
     const payWords = /pagar|comprar|finalizar|checkout|payment|pay|buy|adquirir|contratar|assinar|continuar|confirmar/i;
     let result = html;
     if(result.includes('</body>')) result = result.replace('</body>', snippet + '\n</body>');
     else result = result + snippet;
-    // Remove onclick de botões de pagamento (inline não precisa de botão)
+    // Troca onclick do botão de pagamento para PayOS.gerarInline(this)
     result = result.replace(/<button[^>]*>[\s\S]*?<\/button>/gi, (match) => {
-      if(payWords.test(match)) return match.replace(/onclick="[^"]*"/i,'').replace(/onclick='[^']*'/i,'');
+      if(payWords.test(match)) {
+        let m = match.replace(/onclick="[^"]*"/i,'onclick="PayOS.gerarInline(this)"').replace(/onclick='[^']*'/i,"onclick=\"PayOS.gerarInline(this)\"");
+        if(!/onclick/i.test(m)) m = m.replace('<button','<button onclick="PayOS.gerarInline(this)"');
+        return m;
+      }
       return match;
     });
     return result;
