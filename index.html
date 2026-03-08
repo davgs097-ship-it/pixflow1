@@ -32,11 +32,8 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
-.ambient{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-.ambient-orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:.3;}
-.orb-top{width:700px;height:500px;top:-180px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,229,255,.16) 0%,transparent 70%);}
-.orb-br{width:500px;height:500px;bottom:-150px;right:-150px;background:radial-gradient(circle,rgba(80,40,200,.1) 0%,transparent 70%);}
-.grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse 100% 100% at 50% 0%,black 40%,transparent 100%);}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(0,229,255,.05) 0%,transparent 60%),radial-gradient(ellipse 40% 40% at 90% 90%,rgba(80,40,200,.04) 0%,transparent 50%);pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
 #auth-screen{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;}
 #auth-screen .auth-box{position:relative;z-index:10001;}
 .auth-box{width:100%;max-width:420px;position:relative;animation:authIn .6s cubic-bezier(.34,1.56,.64,1);}
@@ -267,9 +264,6 @@ canvas{display:block;}
 
 </head>
 <body>
-<div class="ambient"><div class="ambient-orb orb-top"></div><div class="ambient-orb orb-br"></div></div>
-<div class="grid-bg"></div>
-
 <!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-box">
