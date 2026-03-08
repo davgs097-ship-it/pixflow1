@@ -3,272 +3,399 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pagamento PIX · PayOS</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Pagamento PIX</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    :root {
-      --bg: #05050a;
-      --s1: #0a0a12;
-      --s2: #0f0f1a;
-      --s3: #14141f;
-      --border: rgba(255,255,255,.055);
-      --border2: rgba(255,255,255,.10);
-      --text: #eeeef5;
-      --text2: #7a7a95;
-      --text3: #3a3a55;
-      --accent: #00e5ff;
-      --accent2: rgba(0,229,255,.08);
-      --accent3: rgba(0,229,255,.18);
-      --glow: rgba(0,229,255,.22);
-      --green: #00ff9d;
-      --green2: rgba(0,255,157,.08);
-      --red: #ff4466;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-    .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
-    .orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: .35; }
-    .orb-1 { width: 600px; height: 600px; top: -200px; left: 50%; transform: translateX(-50%); background: radial-gradient(circle, rgba(0,229,255,.18) 0%, transparent 70%); }
-    .orb-2 { width: 400px; height: 400px; bottom: -100px; right: -100px; background: radial-gradient(circle, rgba(80,40,200,.12) 0%, transparent 70%); }
-    .grid { position: fixed; inset: 0; pointer-events: none; z-index: 0; background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%); }
-    .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(5,5,10,.85); backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); }
-    .logo { display: flex; align-items: center; gap: 9px; font-family: 'DM Mono', monospace; font-size: .68rem; font-weight: 500; letter-spacing: 3px; color: var(--text2); text-transform: uppercase; }
-    .logo-ring { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(0,229,255,.35); display: flex; align-items: center; justify-content: center; }
-    .logo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--glow); animation: breath 2.5s ease-in-out infinite; }
-    @keyframes breath { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
-    .secure { display: flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: .58rem; color: var(--text3); letter-spacing: 1px; }
-    .page { position: relative; z-index: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 80px 16px 48px; }
-    .wrap { width: 100%; max-width: 420px; }
-    #state-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 80px 0; }
-    #state-payment { display: none; animation: riseIn .6s cubic-bezier(.16,1,.3,1) both; }
-    #state-confirmed { display: none; flex-direction: column; align-items: center; text-align: center; padding: 56px 24px; gap: 14px; }
-    #state-error { display: none; flex-direction: column; align-items: center; gap: 14px; padding: 56px 0; }
-    @keyframes riseIn { from{opacity:0;transform:translateY(28px) scale(.98)} to{opacity:1;transform:none} }
-    .spinner { width: 40px; height: 40px; position: relative; }
-    .spinner::before { content:''; position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(255,255,255,.06); }
-    .spinner::after { content:''; position:absolute; inset:0; border-radius:50%; border:1.5px solid transparent; border-top-color:var(--accent); animation:spin .75s linear infinite; }
-    @keyframes spin { to{transform:rotate(360deg)} }
-    .loading-lbl { font-family:'DM Mono',monospace; font-size:.58rem; letter-spacing:3px; color:var(--text3); text-transform:uppercase; animation:blink 1.6s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:.4} 50%{opacity:1} }
-    .tag { display:inline-flex; align-items:center; gap:6px; background:var(--accent2); border:1px solid var(--accent3); border-radius:999px; padding:4px 12px 4px 8px; font-family:'DM Mono',monospace; font-size:.56rem; letter-spacing:1.5px; color:var(--accent); text-transform:uppercase; margin-bottom:18px; }
-    .tag-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--glow); animation:breath 1.4s ease-in-out infinite; }
-    .amt-lbl { font-family:'DM Mono',monospace; font-size:.56rem; letter-spacing:2px; color:var(--text3); text-transform:uppercase; margin-bottom:8px; }
-    .amt-val { font-size:3.2rem; font-weight:800; letter-spacing:-3px; background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1; }
-    .amt-desc { font-size:.75rem; color:var(--text2); margin-top:10px; font-weight:400; }
-    .pcard-header { margin-bottom:28px; }
-    .qr-block { background:var(--s1); border:1px solid var(--border); border-radius:20px; padding:22px; margin-bottom:10px; position:relative; overflow:hidden; }
-    .qr-block::before { content:''; position:absolute; top:0; left:20%; right:20%; height:1px; background:linear-gradient(90deg,transparent,var(--accent3),transparent); }
-    .qr-inner { background:#fff; border-radius:12px; padding:16px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
-    .qr-inner canvas, .qr-inner img { display:block; border-radius:2px; }
-    .qr-foot { display:flex; align-items:center; justify-content:space-between; }
-    .expire-lbl { font-family:'DM Mono',monospace; font-size:.54rem; letter-spacing:1.5px; color:var(--text3); text-transform:uppercase; }
-    .expire-val { font-family:'DM Mono',monospace; font-size:.65rem; font-weight:500; color:var(--text2); background:var(--s3); border:1px solid var(--border2); border-radius:7px; padding:3px 10px; transition:color .3s,border-color .3s; }
-    .expire-val.urgent { color:var(--red) !important; border-color:rgba(255,68,102,.3) !important; }
-    .code-block { background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:border-color .2s; }
-    .code-block:hover { border-color:var(--border2); }
-    .code-lbl { font-family:'DM Mono',monospace; font-size:.52rem; letter-spacing:2px; color:var(--text3); text-transform:uppercase; margin-bottom:7px; }
-    .code-txt { font-family:'DM Mono',monospace; font-size:.56rem; color:var(--text2); word-break:break-all; line-height:1.8; }
-    .btn-copy { width:100%; padding:14px; border-radius:14px; border:1px solid var(--accent3); background:var(--accent2); color:var(--accent); font-family:'Syne',sans-serif; font-size:.8rem; font-weight:600; letter-spacing:.5px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:28px; }
-    .btn-copy:hover { border-color:rgba(0,229,255,.35); box-shadow:0 0 32px rgba(0,229,255,.08); }
-    .btn-copy.copied { background:var(--green2); border-color:rgba(0,255,157,.25); color:var(--green); }
-    .steps-title { font-family:'DM Mono',monospace; font-size:.52rem; letter-spacing:2.5px; color:var(--text3); text-transform:uppercase; margin-bottom:14px; }
-    .steps-list { display:flex; flex-direction:column; margin-bottom:28px; }
-    .step { display:flex; align-items:flex-start; gap:14px; padding:12px 0; border-bottom:1px solid var(--border); }
-    .step:last-child { border-bottom:none; }
-    .step-n { width:22px; height:22px; border-radius:6px; background:var(--s2); border:1px solid var(--border2); font-family:'DM Mono',monospace; font-size:.54rem; font-weight:500; color:var(--text3); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
-    .step-t { font-size:.72rem; color:var(--text2); line-height:1.6; font-weight:400; }
-    .trust { display:flex; align-items:center; justify-content:center; gap:22px; margin-bottom:20px; }
-    .trust-i { display:flex; align-items:center; gap:5px; font-family:'DM Mono',monospace; font-size:.52rem; color:var(--text3); letter-spacing:.5px; }
-    .foot { text-align:center; font-family:'DM Mono',monospace; font-size:.52rem; color:var(--text3); letter-spacing:.5px; }
-    .confirmed-ring { width:76px; height:76px; border-radius:50%; border:1.5px solid rgba(0,255,157,.25); display:flex; align-items:center; justify-content:center; position:relative; margin-bottom:8px; animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both; }
-    @keyframes popIn { from{transform:scale(0) rotate(-15deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
-    .confirmed-ring::before { content:''; position:absolute; inset:-8px; border-radius:50%; border:1px solid rgba(0,255,157,.08); }
-    .confirmed-check { font-size:2rem; filter:drop-shadow(0 0 16px rgba(0,255,157,.5)); }
-    .confirmed-title { font-size:1.3rem; font-weight:700; letter-spacing:-.5px; color:var(--green); }
-    .confirmed-sub { font-size:.75rem; color:var(--text2); line-height:1.7; font-weight:400; }
-    .redir-pill { display:none; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--border2); border-radius:999px; padding:6px 16px; font-family:'DM Mono',monospace; font-size:.6rem; color:var(--text3); margin-top:8px; }
-    .redir-count { color:var(--accent); font-weight:500; }
-    .error-ring { width:60px; height:60px; border-radius:50%; border:1.5px solid rgba(255,68,102,.2); display:flex; align-items:center; justify-content:center; font-size:1.5rem; }
-    .error-msg { font-size:.75rem; color:var(--text2); text-align:center; line-height:1.7; }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 420px;
+      padding: 32px 24px;
+      box-shadow: 0 4px 32px rgba(0,0,0,.10);
+    }
+    .logo {
+      text-align: center;
+      font-size: .8rem;
+      font-weight: 700;
+      color: #aaa;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .logo span { color: var(--accent); }
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #111;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: .78rem;
+      color: #888;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .qr-wrap {
+      background: #fff;
+      border: 2px solid #f0f0f0;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .qr-wrap canvas, .qr-wrap img { display: block; }
+    .amount-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8f8f8;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .amount-label { font-size: .8rem; color: #888; }
+    .amount-value { font-size: 1.2rem; font-weight: 800; color: #111; }
+    .pix-code-box {
+      background: #f8f8f8;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: .65rem;
+      color: #555;
+      word-break: break-all;
+      line-height: 1.7;
+      margin-bottom: 14px;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: border .2s;
+    }
+    .pix-code-box:hover { border-color: var(--accent); }
+    .btn-copy {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      background: var(--accent);
+      color: #fff;
+      transition: all .2s;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-copy:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.15); }
+    .btn-copy.copied { background: #22c55e; }
+    .divider { border: none; border-top: 1.5px solid #f0f0f0; margin: 20px 0; }
+    .steps-title { font-size: .78rem; font-weight: 700; color: #444; margin-bottom: 14px; }
+    .steps { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: .78rem;
+      color: #555;
+      line-height: 1.5;
+    }
+    .step-num {
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .timer-bar {
+      text-align: center;
+      font-size: .72rem;
+      color: #aaa;
+      margin-top: 16px;
+    }
+    .timer-bar span { color: #f59e0b; font-weight: 700; }
+    .footer {
+      text-align: center;
+      font-size: .62rem;
+      color: #ccc;
+      margin-top: 24px;
+    }
+    .footer a { color: #aaa; text-decoration: none; }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px 0;
+      color: #888;
+      font-size: .85rem;
+    }
+    .spin {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 3px solid #eee;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: rot .7s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* Confirmed */
+    .confirmed {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .confirmed .icon { font-size: 3.5rem; margin-bottom: 16px; animation: pop .4s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .confirmed h3 { font-size: 1.2rem; font-weight: 800; color: #22c55e; margin-bottom: 8px; }
+    .confirmed p { font-size: .78rem; color: #888; }
+    .redir-count { color: var(--accent); font-weight: 700; }
   </style>
 </head>
 <body>
-  <div class="ambient"><div class="orb orb-1"></div><div class="orb orb-2"></div></div>
-  <div class="grid"></div>
-  <div class="topbar">
-    <div class="logo"><div class="logo-ring"><div class="logo-dot"></div></div>PayOS</div>
-    <div class="secure">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      Pagamento seguro
+  <div class="card" id="card">
+    <div class="logo">Pay<span>OS</span></div>
+    <div class="loading" id="loading">
+      <div class="spin"></div><br>Carregando...
     </div>
+    <div id="content" style="display:none"></div>
   </div>
-  <div class="page"><div class="wrap">
-
-    <div id="state-loading">
-      <div class="spinner"></div>
-      <div class="loading-lbl">Preparando pagamento</div>
-    </div>
-
-    <div id="state-payment">
-      <div class="pcard-header">
-        <div class="tag"><div class="tag-dot"></div>PIX · Instantâneo</div>
-        <div class="amt-lbl">Valor total</div>
-        <div class="amt-val" id="pay-amount">R$ —</div>
-        <div class="amt-desc" id="pay-desc"></div>
-      </div>
-      <div class="qr-block">
-        <div class="qr-inner"><div id="qr-canvas"></div></div>
-        <div class="qr-foot">
-          <span class="expire-lbl">Expira em</span>
-          <span class="expire-val" id="countdown">15:00</span>
-        </div>
-      </div>
-      <div class="code-block" onclick="copyPix()">
-        <div class="code-lbl">Pix Copia e Cola</div>
-        <div class="code-txt" id="pix-code-display">—</div>
-      </div>
-      <button class="btn-copy" id="btn-copy" onclick="copyPix()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Copiar código PIX
-      </button>
-      <div class="steps-title">Como pagar</div>
-      <div class="steps-list">
-        <div class="step"><div class="step-n">1</div><div class="step-t">Abra o app do seu banco e acesse a área PIX</div></div>
-        <div class="step"><div class="step-n">2</div><div class="step-t">Escaneie o QR Code ou cole o código copiado</div></div>
-        <div class="step"><div class="step-n">3</div><div class="step-t">Confirme os dados e finalize o pagamento</div></div>
-        <div class="step"><div class="step-n">4</div><div class="step-t" id="step-4">Confirmação automática em segundos</div></div>
-      </div>
-      <div class="trust">
-        <div class="trust-i"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Seguro</div>
-        <div class="trust-i"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Imediato</div>
-        <div class="trust-i"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Banco Central</div>
-      </div>
-      <div class="foot">Powered by PayOS · Todos os direitos reservados</div>
-    </div>
-
-    <div id="state-confirmed">
-      <div class="confirmed-ring"><div class="confirmed-check">✓</div></div>
-      <div class="confirmed-title">Pagamento confirmado</div>
-      <div class="confirmed-sub">Seu pagamento foi processado com sucesso.<br>Obrigado!</div>
-      <div class="redir-pill" id="redir-pill">Redirecionando em <span class="redir-count" id="redir-count">3</span>s</div>
-    </div>
-
-    <div id="state-error">
-      <div class="error-ring">⚠</div>
-      <div class="error-msg" id="error-msg">Algo deu errado.</div>
-    </div>
-
-  </div></div>
 
   <script>
     const SUPABASE_FN = 'https://khrygwuykvojnlnaqmys.supabase.co/functions/v1';
     const params = new URLSearchParams(window.location.search);
-    const userId = params.get('user') || null;
-    const productId = params.get('product') || null;
-    let pixCode = null, timerIv = null, pollIv = null;
+    const userId = params.get('user');
+    const productId = params.get('product');
+    let pixCode = '';
+    let timerIv = null;
+    let pollIv = null;
 
-    function show(id) {
-      ['state-loading','state-payment','state-confirmed','state-error'].forEach(s => {
-        const el = document.getElementById(s);
-        el.style.display = s === id ? (s === 'state-payment' ? 'block' : 'flex') : 'none';
-      });
+    function getAccent(cfg) {
+      return cfg.accent_color || '#e11d48';
     }
-    function fmtBRL(c) { return 'R$\u00a0' + (c/100).toFixed(2).replace('.',','); }
+
+    function setAccent(color) {
+      document.documentElement.style.setProperty('--accent', color);
+    }
+
+    function fmtBRL(cents) {
+      return 'R$ ' + (cents / 100).toFixed(2).replace('.', ',');
+    }
+
     function buildRedirectUrl(baseUrl) {
       if (!baseUrl) return null;
       try {
-        const cur = new URLSearchParams(window.location.search);
-        const t = new URL(baseUrl);
-        ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','src'].forEach(k => { if(cur.get(k)) t.searchParams.set(k,cur.get(k)); });
-        return t.toString();
+        const current = new URLSearchParams(window.location.search);
+        const target = new URL(baseUrl);
+        ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','src'].forEach(k => {
+          if (current.get(k)) target.searchParams.set(k, current.get(k));
+        });
+        return target.toString();
       } catch(e) { return baseUrl; }
     }
+
     function startTimer(mins) {
       clearInterval(timerIv);
       let secs = mins * 60;
       const el = document.getElementById('countdown');
+      if (!el) return;
       timerIv = setInterval(() => {
         secs--;
-        if (secs <= 0) { clearInterval(timerIv); if(el){el.textContent='EXPIRADO';el.classList.add('urgent');} return; }
-        const m = Math.floor(secs/60), s = secs%60;
+        if (secs <= 0) { clearInterval(timerIv); if(el) { el.textContent = 'Expirado'; el.style.color = '#ef4444'; } return; }
+        const m = Math.floor(secs/60), s = secs % 60;
         if(el) el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        if (secs < 60 && el) el.classList.add('urgent');
+        if (secs < 60 && el) el.style.color = '#ef4444';
       }, 1000);
     }
+
     function showConfirmed(redirectUrl) {
-      clearInterval(timerIv); clearInterval(pollIv);
-      show('state-confirmed');
+      clearInterval(timerIv);
+      clearInterval(pollIv);
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="confirmed">
+          <div class="icon">✅</div>
+          <h3>Pagamento confirmado!</h3>
+          <p>Seu pagamento foi recebido com sucesso.</p>
+          ${redirectUrl ? `<p style="margin-top:12px;">Redirecionando em <span class="redir-count" id="redir-count">3</span>s...</p>` : ''}
+        </div>
+      `;
       if (redirectUrl) {
-        const pill = document.getElementById('redir-pill');
-        pill.style.display = 'inline-flex';
-        let c = 3;
-        const iv = setInterval(() => { c--; const el=document.getElementById('redir-count'); if(el) el.textContent=c; if(c<=0){clearInterval(iv);window.location.href=redirectUrl;} }, 1000);
+        let count = 3;
+        const iv = setInterval(() => {
+          count--;
+          const el = document.getElementById('redir-count');
+          if (el) el.textContent = count;
+          if (count <= 0) { clearInterval(iv); window.location.href = redirectUrl; }
+        }, 1000);
       }
     }
-    function startPolling(since, redirectUrl) {
+
+    function startPolling(since, userId, redirectUrl) {
       clearInterval(pollIv);
       const finalUrl = buildRedirectUrl(redirectUrl);
       pollIv = setInterval(async () => {
         try {
-          const res = await fetch(`${SUPABASE_FN}/check-payment`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:userId,since}) });
+          const res = await fetch(`${SUPABASE_FN}/check-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, since })
+          });
           const data = await res.json();
           if (data && data.paid) showConfirmed(finalUrl);
         } catch(e) {}
       }, 3000);
     }
+
     function copyPix() {
       if (!pixCode) return;
       navigator.clipboard.writeText(pixCode).then(() => {
         const btn = document.getElementById('btn-copy');
         if (btn) {
           btn.classList.add('copied');
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copiado!`;
-          setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código PIX`; }, 2500);
+          btn.innerHTML = '✓ Código copiado!';
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = '📋 Copiar código PIX';
+          }, 2500);
         }
       });
     }
+
     function renderPix(cfg, code) {
       pixCode = code;
-      document.getElementById('pay-amount').textContent = fmtBRL(cfg.amount);
-      document.getElementById('pay-desc').textContent = cfg.description || '';
-      document.getElementById('pix-code-display').textContent = code.substring(0,72) + '...';
-      if (cfg.redirect_url) document.getElementById('step-4').textContent = 'Você será redirecionado automaticamente após a confirmação';
-      show('state-payment');
-      new QRCode(document.getElementById('qr-canvas'), { text:code, width:224, height:224, colorDark:'#000', colorLight:'#fff' });
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <h2>Escaneie o QR-code ou copie o código.</h2>
+        <p class="subtitle">${cfg.description || 'Finalize seu pagamento via PIX'}</p>
+        <div class="qr-wrap"><div id="qr-canvas"></div></div>
+        <div class="amount-row">
+          <span class="amount-label">Valor PIX:</span>
+          <span class="amount-value">${fmtBRL(cfg.amount)}</span>
+        </div>
+        <div class="pix-code-box" onclick="copyPix()">${code.substring(0,80)}...</div>
+        <button class="btn-copy" id="btn-copy" onclick="copyPix()">📋 Copiar PIX</button>
+        <hr class="divider">
+        <p class="steps-title">Como pagar:</p>
+        <ul class="steps">
+          <li><span class="step-num">1</span>Abra o aplicativo do seu banco e selecione a opção de pagamento PIX</li>
+          <li><span class="step-num">2</span>Escolha pagar usando o QR Code ou copie o código PIX acima</li>
+          <li><span class="step-num">3</span>Confirme os detalhes do pagamento e o destinatário</li>
+          <li><span class="step-num">4</span>Conclua o pagamento e guarde o comprovante ${cfg.redirect_url ? '(você será redirecionado automaticamente após o pagamento)' : ''}</li>
+        </ul>
+        <div class="timer-bar">⏱ Expira em <span id="countdown">15:00</span></div>
+      `;
+      content.style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+
+      new QRCode(document.getElementById('qr-canvas'), {
+        text: code, width: 200, height: 200,
+        colorDark: '#000', colorLight: '#fff'
+      });
+
       startTimer(15);
-      startPolling(new Date().toISOString(), cfg.redirect_url || null);
+      const since = new Date().toISOString();
+      startPolling(since, userId, cfg.redirect_url || null);
     }
+
     async function init() {
-      show('state-loading');
-      if (!userId) { document.getElementById('error-msg').textContent = 'Link inválido.'; show('state-error'); return; }
+      if (!userId) {
+        document.getElementById('loading').innerHTML = '<p style="color:#ef4444">Link inválido — user não encontrado.</p>';
+        return;
+      }
+
+      // Busca config
       let cfg;
       try {
-        const res = await fetch(`${SUPABASE_FN}/get-pix-config`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:userId,product_id:productId}) });
+        const res = await fetch(`${SUPABASE_FN}/get-pix-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, product_id: productId })
+        });
         cfg = await res.json();
-      } catch(e) { document.getElementById('error-msg').textContent = 'Erro ao carregar produto.'; show('state-error'); return; }
-      if (cfg.accent_color) {
-        const c = cfg.accent_color;
-        document.documentElement.style.setProperty('--accent', c);
-        document.documentElement.style.setProperty('--accent2', c + '14');
-        document.documentElement.style.setProperty('--accent3', c + '2e');
-        document.documentElement.style.setProperty('--glow', c + '38');
+      } catch(e) {
+        document.getElementById('loading').innerHTML = '<p style="color:#ef4444">Erro ao carregar produto.</p>';
+        return;
       }
+
+      setAccent(cfg.accent_color || '#e11d48');
+
+      // Gera PIX
       const webhookUrl = `${SUPABASE_FN}/webhook?user=${userId}`;
       const reference = 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
+
       try {
         let resp, data, code;
         if (cfg.gateway === 'pp') {
-          resp = await fetch(`${SUPABASE_FN}/pix-pp`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ api_key:cfg.api_key, amount:cfg.amount, description:cfg.description||'Pagamento', reference, postback_url:webhookUrl, product_hash:cfg.pp_product_hash||null, customer:{ name:'Cliente', email:'cliente+'+Math.random().toString(36).substr(2,8)+'@pagamento.com', phone:'11999999999', document:cfg.seller_doc||'00000000000' } }) });
-          data = await resp.json(); code = data.qr_code;
+          resp = await fetch(`${SUPABASE_FN}/pix-pp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: cfg.api_key,
+              amount: cfg.amount,
+              description: cfg.description || 'Pagamento',
+              reference,
+              postback_url: webhookUrl,
+              product_hash: cfg.pp_product_hash || null,
+              customer: {
+                name: 'Cliente',
+                email: 'cliente+' + Math.random().toString(36).substr(2,8) + '@pagamento.com',
+                phone: '11999999999',
+                document: cfg.seller_doc || '00000000000'
+              }
+            })
+          });
+          data = await resp.json();
+          code = data.qr_code;
         } else {
-          resp = await fetch(`${SUPABASE_FN}/pix-z1`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ api_token:cfg.api_key, amount:cfg.amount, offer_hash:cfg.offer_hash, product_hash:cfg.product_hash, description:cfg.description||'Pagamento', webhook_url:webhookUrl, customer:{ name:'Cliente', email:'cliente@pagamento.com', phone_number:'11999999999', document:cfg.seller_doc||'00000000000' } }) });
-          data = await resp.json(); code = data._qr_code || data.pix?.pix_qr_code || data.pix?.qr_code;
+          resp = await fetch(`${SUPABASE_FN}/pix-z1`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_token: cfg.api_key,
+              amount: cfg.amount,
+              offer_hash: cfg.offer_hash,
+              product_hash: cfg.product_hash,
+              description: cfg.description || 'Pagamento',
+              webhook_url: webhookUrl,
+              customer: { name:'Cliente', email:'cliente@pagamento.com', phone_number:'11999999999', document: cfg.seller_doc || '00000000000' }
+            })
+          });
+          data = await resp.json();
+          code = data._qr_code || data.pix?.pix_qr_code || data.pix?.qr_code;
         }
-        if (code) { renderPix(cfg, code); }
-        else { document.getElementById('error-msg').textContent = 'Não foi possível gerar o PIX.'; show('state-error'); }
-      } catch(e) { document.getElementById('error-msg').textContent = 'Erro de conexão.'; show('state-error'); }
+
+        if (code) {
+          renderPix(cfg, code);
+        } else {
+          document.getElementById('loading').innerHTML = '<p style="color:#ef4444">Não foi possível gerar o PIX. Tente novamente.</p>';
+        }
+      } catch(e) {
+        document.getElementById('loading').innerHTML = '<p style="color:#ef4444">Erro de conexão. Tente novamente.</p>';
+      }
     }
+
     init();
   </script>
 </body>
