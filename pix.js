@@ -142,9 +142,23 @@
     }
   }
 
-  function startRealtime(reference, userId, redirectUrl) {
+  function buildRedirectUrl(baseUrl) {
+    if (!baseUrl) return null;
+    try {
+      const current = new URLSearchParams(window.location.search);
+      const target = new URL(baseUrl);
+      const utmKeys = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','src'];
+      utmKeys.forEach(k => {
+        if (current.get(k)) target.searchParams.set(k, current.get(k));
+      });
+      return target.toString();
+    } catch(e) {
+      return baseUrl;
+    }
+  }
     stopRealtime();
     const since = new Date().toISOString();
+    const finalUrl = buildRedirectUrl(redirectUrl);
     _realtimeChannel = setInterval(async () => {
       try {
         const res = await fetch(`${SUPABASE_FN}/check-payment`, {
@@ -154,7 +168,7 @@
         });
         const data = await res.json();
         if (data && data.paid) {
-          showConfirmed(redirectUrl);
+          showConfirmed(finalUrl);
         }
       } catch(e) {}
     }, 3000);
