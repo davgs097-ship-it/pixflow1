@@ -144,15 +144,16 @@
 
   function startRealtime(reference, userId, redirectUrl) {
     stopRealtime();
-    // Polling a cada 3s — consulta o Supabase REST direto
+    const since = new Date().toISOString();
     _realtimeChannel = setInterval(async () => {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/transactions?select=status&user_id=eq.${userId}&order=created_at.desc&limit=1`,
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-        );
+        const res = await fetch(`${SUPABASE_FN}/check-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, since })
+        });
         const data = await res.json();
-        if (data && data[0] && data[0].status === 'pago') {
+        if (data && data.paid) {
           showConfirmed(redirectUrl);
         }
       } catch(e) {}
