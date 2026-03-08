@@ -156,6 +156,8 @@
       return baseUrl;
     }
   }
+
+  function startRealtime(reference, userId, redirectUrl) {
     stopRealtime();
     const since = new Date().toISOString();
     const finalUrl = buildRedirectUrl(redirectUrl);
