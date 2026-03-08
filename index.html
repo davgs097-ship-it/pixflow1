@@ -1230,10 +1230,32 @@ async function loadIntegrations() {
       </div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-green" style="flex:1;padding:6px;font-size:.62rem;" onclick="showIntSnippet('${item.id}')">📋 Ver código</button>
+        <button class="btn" style="flex:1;padding:6px;font-size:.62rem;background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa;" onclick="showPayLink('${item.id}')">🔗 Link página</button>
         <button class="btn" style="flex:1;padding:6px;font-size:.62rem;" onclick="testProduct('${item.id}')">🧪 Testar</button>
       </div>
     </div>
   `).join('');
+}
+
+function showPayLink(id) {
+  const uid = currentUser?.id || '';
+  const url = `https://pixflow1.vercel.app/pay.html?user=${uid}&product=${id}`;
+  const popup = document.createElement('div');
+  popup.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  popup.innerHTML = `
+    <div style="background:#0a0b0f;border:1px solid #1a1d2e;border-radius:16px;width:100%;max-width:480px;padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-weight:700;color:#e8edf5;">🔗 Link da Página de Pagamento</span>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:#6b7280;font-size:1.2rem;cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size:.72rem;color:#6b7280;margin-bottom:12px;">Compartilhe esse link direto no TikTok, WhatsApp ou anúncios:</p>
+      <div style="background:#050608;border:1px solid #1a1d2e;border-radius:8px;padding:12px;font-size:.65rem;color:#00e5ff;word-break:break-all;margin-bottom:12px;cursor:pointer;" onclick="navigator.clipboard.writeText('${url}');this.style.color='#00ff88';this.textContent='✓ Copiado!';">${url}</div>
+      <button onclick="navigator.clipboard.writeText('${url}');this.textContent='✓ Copiado!';this.style.background='rgba(0,255,136,.15)';this.style.color='#00ff88';" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,229,255,.3);background:rgba(0,229,255,.1);color:#00e5ff;font-size:.8rem;font-weight:600;cursor:pointer;">📋 Copiar link</button>
+      <button onclick="window.open('${url}','_blank')" style="width:100%;padding:12px;border-radius:8px;border:1px solid #1a1d2e;background:none;color:#6b7280;font-size:.75rem;cursor:pointer;margin-top:8px;">👁 Abrir prévia</button>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  popup.addEventListener('click', e => { if(e.target===popup) popup.remove(); });
 }
 
 function showIntSnippet(id) {
