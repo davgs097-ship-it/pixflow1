@@ -519,7 +519,7 @@ canvas{display:block;}
                 <option value="gp">GhostsPays</option>
               </select>
             </div>
-            <div class="fg"><label>API Key / Token</label><input class="input" id="int-key" type="password" placeholder="sk_... ou seu api_token"></div>
+            <div class="fg" id="int-key-wrap"><label>API Key / Token</label><input class="input" id="int-key" type="password" placeholder="sk_... ou seu api_token"></div>
 
             <div id="int-z1-fields" style="display:none;">
               <div class="fg"><label>offer_hash</label><input class="input" id="int-off" placeholder="ex: wtuk6qihsb_jgndu9xkee"></div>
@@ -1143,6 +1143,7 @@ function toggleIntGw() {
   $('int-z1-fields').style.display = gw === 'z1' ? 'block' : 'none';
   $('int-pp-fields').style.display = gw === 'pp' ? 'block' : 'none';
   $('int-gp-fields').style.display = gw === 'gp' ? 'block' : 'none';
+  $('int-key-wrap').style.display = gw === 'gp' ? 'none' : 'flex';
 }
 
 function resetIntForm() {
@@ -1198,7 +1199,7 @@ async function saveIntegration() {
   const editId = v('int-edit-id');
 
   if (!name) { toast('Digite o nome do produto'); return; }
-  if (!key) { toast('API Key obrigatória'); return; }
+  if (!key && gw !== 'gp') { toast('API Key obrigatória'); return; }
   if (!amt) { toast('Amount obrigatório'); return; }
   if (gw === 'pp' && !v('int-pp-prod')) { toast('productHash é obrigatório para Paradise Pags'); return; }
   if (gw === 'gp' && !v('int-gp-key')) { toast('Secret Key é obrigatória para GhostsPays'); return; }
