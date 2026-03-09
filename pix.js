@@ -241,6 +241,21 @@
         });
         data = await resp.json();
         pixCode = data.qr_code;
+      } else if (cfg.gateway === 'gp') {
+        resp = await fetch(`${SUPABASE_FN}/pix-gp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret_key: cfg.gp_secret_key,
+            company_id: cfg.gp_company_id,
+            amount: cfg.amount,
+            description: cfg.description || 'Pagamento',
+            postback_url: webhookUrl,
+            customer: { name:'Cliente', email:'cliente+' + Math.random().toString(36).substr(2,8) + '@pagamento.com', phone:'11999999999', document: cfg.seller_doc || '00000000000' }
+          })
+        });
+        data = await resp.json();
+        pixCode = data.pix?.qrcode || data.qrcode;
       } else {
         resp = await fetch(`${SUPABASE_FN}/pix-z1`, {
           method: 'POST',
@@ -302,6 +317,9 @@
         if (cfg.gateway === 'pp') {
           const r = await fetch(`${SUPABASE_FN}/pix-pp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ api_key:cfg.api_key, amount:cfg.amount, description:cfg.description||'Pagamento', reference, postback_url:webhookUrl, product_hash:cfg.pp_product_hash||null, customer:{name:'Cliente',email:'cliente+'+Math.random().toString(36).substr(2,8)+'@pagamento.com',phone:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
           const d = await r.json(); pixCode = d.qr_code;
+        } else if (cfg.gateway === 'gp') {
+          const r = await fetch(`${SUPABASE_FN}/pix-gp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ secret_key:cfg.gp_secret_key, company_id:cfg.gp_company_id, amount:cfg.amount, description:cfg.description||'Pagamento', postback_url:webhookUrl, customer:{name:'Cliente',email:'cliente+'+Math.random().toString(36).substr(2,8)+'@pagamento.com',phone:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
+          const d = await r.json(); pixCode = d.pix?.qrcode || d.qrcode;
         } else {
           const r = await fetch(`${SUPABASE_FN}/pix-z1`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ api_token:cfg.api_key, amount:cfg.amount, offer_hash:cfg.offer_hash, product_hash:cfg.product_hash, description:cfg.description||'Pagamento', webhook_url:webhookUrl, customer:{name:'Cliente',email:'cliente@pagamento.com',phone_number:'11999999999',document:cfg.seller_doc||'00000000000'} }) });
           const d = await r.json(); pixCode = d._qr_code || d.pix?.pix_qr_code || d.pix?.qr_code;
