@@ -34,19 +34,8 @@
       margin-bottom: 24px;
     }
     .logo span { color: var(--accent); }
-    h2 {
-      font-size: 1.1rem;
-      font-weight: 800;
-      color: #111;
-      margin-bottom: 6px;
-      text-align: center;
-    }
-    .subtitle {
-      font-size: .78rem;
-      color: #888;
-      text-align: center;
-      margin-bottom: 24px;
-    }
+    h2 { font-size: 1.1rem; font-weight: 800; color: #111; margin-bottom: 6px; text-align: center; }
+    .subtitle { font-size: .78rem; color: #888; text-align: center; margin-bottom: 24px; }
     .qr-wrap {
       background: #fff;
       border: 2px solid #f0f0f0;
@@ -106,66 +95,26 @@
     .divider { border: none; border-top: 1.5px solid #f0f0f0; margin: 20px 0; }
     .steps-title { font-size: .78rem; font-weight: 700; color: #444; margin-bottom: 14px; }
     .steps { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-    .steps li {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      font-size: .78rem;
-      color: #555;
-      line-height: 1.5;
-    }
+    .steps li { display: flex; align-items: flex-start; gap: 12px; font-size: .78rem; color: #555; line-height: 1.5; }
     .step-num {
-      min-width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
-      font-size: .7rem;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin-top: 1px;
+      min-width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: .7rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
     }
-    .timer-bar {
-      text-align: center;
-      font-size: .72rem;
-      color: #aaa;
-      margin-top: 16px;
-    }
+    .timer-bar { text-align: center; font-size: .72rem; color: #aaa; margin-top: 16px; }
     .timer-bar span { color: #f59e0b; font-weight: 700; }
-    .footer {
-      text-align: center;
-      font-size: .62rem;
-      color: #ccc;
-      margin-top: 24px;
-    }
+    .footer { text-align: center; font-size: .62rem; color: #ccc; margin-top: 24px; }
     .footer a { color: #aaa; text-decoration: none; }
-
-    /* Loading */
-    .loading {
-      text-align: center;
-      padding: 40px 0;
-      color: #888;
-      font-size: .85rem;
-    }
+    .loading { text-align: center; padding: 40px 0; color: #888; font-size: .85rem; }
     .spin {
-      display: inline-block;
-      width: 32px; height: 32px;
-      border: 3px solid #eee;
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: rot .7s linear infinite;
-      margin-bottom: 12px;
+      display: inline-block; width: 32px; height: 32px;
+      border: 3px solid #eee; border-top-color: var(--accent);
+      border-radius: 50%; animation: rot .7s linear infinite; margin-bottom: 12px;
     }
     @keyframes rot { to { transform: rotate(360deg); } }
-
-    /* Confirmed */
-    .confirmed {
-      text-align: center;
-      padding: 40px 20px;
-    }
+    .confirmed { text-align: center; padding: 40px 20px; }
     .confirmed .icon { font-size: 3.5rem; margin-bottom: 16px; animation: pop .4s cubic-bezier(.34,1.56,.64,1); }
     @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     .confirmed h3 { font-size: 1.2rem; font-weight: 800; color: #22c55e; margin-bottom: 8px; }
@@ -190,10 +139,6 @@
     let pixCode = '';
     let timerIv = null;
     let pollIv = null;
-
-    function getAccent(cfg) {
-      return cfg.accent_color || '#e11d48';
-    }
 
     function setAccent(color) {
       document.documentElement.style.setProperty('--accent', color);
@@ -275,10 +220,7 @@
         if (btn) {
           btn.classList.add('copied');
           btn.innerHTML = '✓ Código copiado!';
-          setTimeout(() => {
-            btn.classList.remove('copied');
-            btn.innerHTML = '📋 Copiar código PIX';
-          }, 2500);
+          setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 Copiar código PIX'; }, 2500);
         }
       });
     }
@@ -308,12 +250,7 @@
       `;
       content.style.display = 'block';
       document.getElementById('loading').style.display = 'none';
-
-      new QRCode(document.getElementById('qr-canvas'), {
-        text: code, width: 200, height: 200,
-        colorDark: '#000', colorLight: '#fff'
-      });
-
+      new QRCode(document.getElementById('qr-canvas'), { text: code, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
       startTimer(15);
       const since = new Date().toISOString();
       startPolling(since, userId, cfg.redirect_url || null);
@@ -325,7 +262,6 @@
         return;
       }
 
-      // Busca config
       let cfg;
       try {
         const res = await fetch(`${SUPABASE_FN}/get-pix-config`, {
@@ -341,12 +277,12 @@
 
       setAccent(cfg.accent_color || '#e11d48');
 
-      // Gera PIX
       const webhookUrl = `${SUPABASE_FN}/webhook?user=${userId}`;
       const reference = 'REF-' + Date.now() + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
 
       try {
         let resp, data, code;
+
         if (cfg.gateway === 'pp') {
           resp = await fetch(`${SUPABASE_FN}/pix-pp`, {
             method: 'POST',
@@ -368,6 +304,28 @@
           });
           data = await resp.json();
           code = data.qr_code;
+
+        } else if (cfg.gateway === 'gp') {
+          resp = await fetch(`${SUPABASE_FN}/pix-gp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              secret_key: cfg.gp_secret_key,
+              company_id: cfg.gp_company_id,
+              amount: cfg.amount,
+              description: cfg.description || 'Pagamento',
+              postback_url: webhookUrl,
+              customer: {
+                name: 'Cliente',
+                email: 'cliente+' + Math.random().toString(36).substr(2,8) + '@pagamento.com',
+                phone: '11999999999',
+                document: cfg.seller_doc || '00000000000'
+              }
+            })
+          });
+          data = await resp.json();
+          code = data.pix?.qrcode || data.qrcode;
+
         } else {
           resp = await fetch(`${SUPABASE_FN}/pix-z1`, {
             method: 'POST',
