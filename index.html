@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PayOS — PIX Gateway</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#00e5ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PayOS">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -883,6 +888,7 @@ function showApp() {
   loadTransactions();
   loadIntegration();
   loadSites();
+  initPWAAfterLogin();
 }
 
 // Check session on load
@@ -998,6 +1004,68 @@ async function loadTransactions() {
 
 // Auto-refresh a cada 30s
 setInterval(() => { if(currentUser) loadTransactions(); }, 30000);
+
+// ── PWA + NOTIFICAÇÕES ──
+let swReg = null;
+let _lastTxIds = new Set();
+
+async function initPWA() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('/sw.js');
+  } catch(e) { console.warn('SW registro falhou:', e); }
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+function notifyPayment(tx) {
+  if (!swReg?.active) return;
+  const amount = tx.amount ? 'R$ ' + (tx.amount/100).toFixed(2).replace('.',',') : '';
+  swReg.active.postMessage({
+    type: 'NOTIFY_PAYMENT',
+    amount,
+    product: tx.product || tx.description || '',
+    gateway: tx.gateway || ''
+  });
+}
+
+// Detecta novos pagamentos confirmados no polling
+async function checkNewPayments() {
+  if (!currentUser) return;
+  const { data } = await sb.from('transactions')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .in('status', ['pago','paid','approved'])
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (!data?.length) return;
+  if (_lastTxIds.size === 0) {
+    data.forEach(t => _lastTxIds.add(t.id));
+    return;
+  }
+  for (const tx of data) {
+    if (!_lastTxIds.has(tx.id)) {
+      _lastTxIds.add(tx.id);
+      notifyPayment(tx);
+    }
+  }
+}
+
+// Inicia PWA após login
+async function initPWAAfterLogin() {
+  await initPWA();
+  const granted = await requestNotifPermission();
+  if (granted) {
+    setInterval(checkNewPayments, 15000);
+  }
+}
+
 
 // ── ZERO ONE PAY ──
 async function z1Submit() {
