@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayOS — Gateway PIX para Infoprodutores</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050608;
+  --bg2: #0a0b0f;
+  --bg3: #0f1117;
+  --bg4: #141720;
+  --border: #1a1d2e;
+  --border2: #242840;
+  --accent: #00e5ff;
+  --accent2: #00b4cc;
+  --green: #00ff88;
+  --amber: #ffb800;
+  --red: #ff3d5a;
+  --z1: #ff6b35;
+  --pp: #c084fc;
+  --gp: #818cf8;
+  --text: #e8edf5;
+  --text2: #6b7280;
+  --text3: #374151;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
+
+/* NOISE + SCANLINES */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.006) 2px,rgba(0,229,255,0.006) 4px);pointer-events:none;z-index:9998;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(26,29,46,0.8);background:rgba(5,6,8,0.85);backdrop-filter:blur(20px);}
+.nav-logo{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;letter-spacing:-1px;color:var(--accent);text-shadow:0 0 24px rgba(0,229,255,0.35);}
+.nav-links{display:flex;align-items:center;gap:32px;}
+.nav-links a{font-size:.68rem;color:var(--text2);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;transition:color .2s;}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{padding:8px 20px;border-radius:8px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.25);color:var(--accent) !important;font-size:.68rem !important;text-transform:uppercase;letter-spacing:1px;transition:all .2s !important;cursor:pointer;}
+.nav-cta:hover{background:rgba(0,229,255,0.18) !important;box-shadow:0 0 24px rgba(0,229,255,0.15);}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:100px 40px 60px;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;pointer-events:none;}
+.hero-orb1{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,0.07) 0%,transparent 70%);top:-200px;left:-200px;animation:drift1 12s ease-in-out infinite;}
+.hero-orb2{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,0.05) 0%,transparent 70%);bottom:-100px;right:-100px;animation:drift2 15s ease-in-out infinite;}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:60px 60px;opacity:0.3;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);}
+@keyframes drift1{0%,100%{transform:translate(0,0);}50%{transform:translate(40px,30px);}}
+@keyframes drift2{0%,100%{transform:translate(0,0);}50%{transform:translate(-30px,20px);}}
+.hero-content{position:relative;text-align:center;max-width:800px;animation:heroIn 1s cubic-bezier(.34,1.56,.64,1);}
+@keyframes heroIn{from{opacity:0;transform:translateY(50px);}to{opacity:1;transform:none;}}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);font-size:.6rem;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:28px;}
+.hero-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;box-shadow:0 0 8px var(--accent);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(2.8rem,7vw,5.5rem);font-weight:800;line-height:1.05;letter-spacing:-3px;margin-bottom:20px;}
+.hero-title .line1{display:block;color:var(--text);}
+.hero-title .line2{display:block;color:var(--accent);text-shadow:0 0 60px rgba(0,229,255,0.3);}
+.hero-sub{font-size:.85rem;color:var(--text2);line-height:1.9;max-width:540px;margin:0 auto 40px;letter-spacing:.2px;}
+.hero-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+.btn-hero-primary{padding:14px 32px;border-radius:10px;background:linear-gradient(135deg,rgba(0,229,255,0.18),rgba(0,229,255,0.06));border:1px solid rgba(0,229,255,0.35);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+.btn-hero-primary:hover{box-shadow:0 0 40px rgba(0,229,255,0.2);background:rgba(0,229,255,0.15);}
+.btn-hero-secondary{padding:14px 28px;border-radius:10px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-decoration:none;}
+.btn-hero-secondary:hover{border-color:var(--border);color:var(--text);}
+.hero-stats{display:flex;align-items:center;justify-content:center;gap:40px;margin-top:60px;padding-top:40px;border-top:1px solid var(--border);}
+.h-stat{text-align:center;}
+.h-stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-1px;color:var(--accent);}
+.h-stat-label{font-size:.58rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+
+/* GATEWAYS BANNER */
+.gw-banner{padding:24px 40px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;gap:48px;overflow:hidden;}
+.gw-banner-label{font-size:.58rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;white-space:nowrap;}
+.gw-items{display:flex;align-items:center;gap:32px;}
+.gw-item{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);}
+.gw-dot{width:7px;height:7px;border-radius:50%;}
+.gw-name{font-size:.7rem;font-weight:600;letter-spacing:.5px;}
+
+/* SECTION */
+section{padding:100px 40px;}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-tag{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-tag::before{content:'';width:24px;height:1px;background:var(--accent);}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-2px;margin-bottom:16px;line-height:1.1;}
+.section-sub{font-size:.82rem;color:var(--text2);line-height:1.9;max-width:540px;}
+
+/* FEATURES */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:60px;}
+.feat-card{background:var(--bg2);padding:32px 28px;transition:background .2s;position:relative;overflow:hidden;}
+.feat-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(0,229,255,0.04),transparent 60%);opacity:0;transition:opacity .3s;}
+.feat-card:hover{background:var(--bg3);}
+.feat-card:hover::before{opacity:1;}
+.feat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:18px;border:1px solid var(--border2);}
+.feat-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:10px;letter-spacing:-.3px;}
+.feat-desc{font-size:.72rem;color:var(--text2);line-height:1.9;}
+.feat-tag{display:inline-flex;margin-top:14px;padding:3px 10px;border-radius:4px;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;}
+
+/* HOW IT WORKS */
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:60px;position:relative;}
+.how-grid::before{content:'';position:absolute;top:32px;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,var(--border2),var(--border2),transparent);z-index:0;}
+.how-step{position:relative;z-index:1;text-align:center;}
+.how-num{width:64px;height:64px;border-radius:50%;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:var(--accent);margin:0 auto 20px;position:relative;}
+.how-num::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(0,229,255,0.1);}
+.how-step-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;margin-bottom:8px;}
+.how-step-desc{font-size:.68rem;color:var(--text2);line-height:1.8;}
+
+/* PRICING */
+#pricing{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px;}
+.price-card{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:32px 28px;position:relative;transition:all .25s;}
+.price-card:hover{border-color:var(--border2);transform:translateY(-4px);}
+.price-card.featured{border-color:rgba(0,229,255,0.3);background:linear-gradient(135deg,rgba(0,229,255,0.04),var(--bg));box-shadow:0 0 60px rgba(0,229,255,0.06);}
+.price-featured-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:4px 16px;border-radius:20px;background:var(--accent);color:#000;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;}
+.price-name{font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:16px;}
+.price-val{font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;letter-spacing:-2px;line-height:1;margin-bottom:4px;}
+.price-val span{font-size:1.2rem;vertical-align:top;margin-top:8px;display:inline-block;font-weight:400;color:var(--text2);}
+.price-period{font-size:.65rem;color:var(--text3);margin-bottom:24px;letter-spacing:.5px;}
+.price-divider{height:1px;background:var(--border);margin-bottom:24px;}
+.price-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+.pf{display:flex;align-items:flex-start;gap:10px;font-size:.72rem;color:var(--text2);line-height:1.6;}
+.pf-check{color:var(--green);flex-shrink:0;margin-top:1px;}
+.pf-x{color:var(--text3);flex-shrink:0;margin-top:1px;}
+.price-btn{width:100%;padding:12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.5px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);}
+.price-btn:hover{border-color:var(--border);color:var(--text);}
+.price-btn.featured-btn{border-color:rgba(0,229,255,0.35);background:rgba(0,229,255,0.1);color:var(--accent);}
+.price-btn.featured-btn:hover{box-shadow:0 0 30px rgba(0,229,255,0.15);}
+
+/* TESTIMONIALS */
+.test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px;}
+.test-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;transition:border-color .2s;}
+.test-card:hover{border-color:var(--border2);}
+.test-stars{display:flex;gap:3px;margin-bottom:14px;}
+.test-star{color:var(--amber);font-size:.85rem;}
+.test-text{font-size:.75rem;color:var(--text2);line-height:1.9;margin-bottom:18px;font-style:italic;}
+.test-author{display:flex;align-items:center;gap:10px;}
+.test-avatar{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#000;flex-shrink:0;}
+.test-name{font-size:.75rem;font-weight:600;color:var(--text);}
+.test-role{font-size:.62rem;color:var(--text3);margin-top:2px;}
+
+/* FAQ */
+#faq{background:var(--bg2);border-top:1px solid var(--border);}
+.faq-list{margin-top:60px;display:flex;flex-direction:column;gap:2px;}
+.faq-item{border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s;}
+.faq-item.open{border-color:var(--border2);}
+.faq-q{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:.82rem;font-weight:600;transition:background .15s;}
+.faq-q:hover{background:var(--bg3);}
+.faq-arrow{color:var(--text2);transition:transform .25s;font-size:.7rem;}
+.faq-item.open .faq-arrow{transform:rotate(90deg);color:var(--accent);}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.faq-item.open .faq-a{max-height:200px;}
+.faq-a-inner{padding:0 24px 20px;font-size:.75rem;color:var(--text2);line-height:1.9;border-top:1px solid var(--border);}
+
+/* CTA FINAL */
+.cta-section{padding:120px 40px;text-align:center;position:relative;overflow:hidden;}
+.cta-bg-orb{position:absolute;width:800px;height:400px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,229,255,0.07),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.cta-inner{position:relative;max-width:640px;margin:0 auto;}
+.cta-title{font-family:'Syne',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:800;letter-spacing:-2px;line-height:1.1;margin-bottom:20px;}
+.cta-title .accent{color:var(--accent);text-shadow:0 0 40px rgba(0,229,255,0.3);}
+.cta-sub{font-size:.82rem;color:var(--text2);line-height:1.9;margin-bottom:40px;}
+.cta-form{display:flex;gap:10px;max-width:440px;margin:0 auto;}
+.cta-input{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:13px 16px;outline:none;transition:border-color .15s;}
+.cta-input:focus{border-color:rgba(0,229,255,0.3);}
+.cta-btn{padding:13px 24px;border-radius:10px;background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.3);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:.5px;}
+.cta-btn:hover{box-shadow:0 0 30px rgba(0,229,255,0.2);background:rgba(0,229,255,0.18);}
+.cta-note{font-size:.62rem;color:var(--text3);margin-top:14px;letter-spacing:.5px;}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:40px;display:flex;align-items:center;justify-content:space-between;background:var(--bg2);}
+.footer-logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:-1px;color:var(--accent);}
+.footer-copy{font-size:.62rem;color:var(--text3);letter-spacing:.5px;}
+.footer-links{display:flex;gap:24px;}
+.footer-links a{font-size:.62rem;color:var(--text3);text-decoration:none;letter-spacing:.5px;transition:color .2s;}
+.footer-links a:hover{color:var(--text2);}
+
+/* SCROLL ANIMATIONS */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease;}
+.reveal.visible{opacity:1;transform:none;}
+.reveal-delay-1{transition-delay:.1s;}
+.reveal-delay-2{transition-delay:.2s;}
+.reveal-delay-3{transition-delay:.3s;}
+.reveal-delay-4{transition-delay:.4s;}
+
+@media(max-width:768px){
+  nav{padding:0 20px;}
+  .nav-links{display:none;}
+  section{padding:70px 20px;}
+  .features-grid{grid-template-columns:1fr;}
+  .how-grid{grid-template-columns:1fr 1fr;}
+  .how-grid::before{display:none;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .test-grid{grid-template-columns:1fr;}
+  .gw-banner{flex-direction:column;gap:16px;padding:20px;}
+  .gw-items{flex-wrap:wrap;justify-content:center;}
+  .hero-stats{gap:24px;}
+  .cta-form{flex-direction:column;}
+  footer{flex-direction:column;gap:16px;text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">PayOS</div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#pricing">Preços</a>
+    <a href="#faq">FAQ</a>
+    <a href="#cta" class="nav-cta">→ Começar grátis</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-orb1"></div>
+    <div class="hero-orb2"></div>
+    <div class="hero-grid"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-badge"><span class="hero-badge-dot"></span> Gateway PIX para infoprodutores</div>
+    <h1 class="hero-title">
+      <span class="line1">Receba PIX.</span>
+      <span class="line2">Automatize tudo.</span>
+    </h1>
+    <p class="hero-sub">PayOS conecta seu produto digital aos maiores gateways PIX do mercado. Configure em minutos, injete no seu site e receba automaticamente — sem complicação.</p>
+    <div class="hero-btns">
+      <a href="#cta" class="btn-hero-primary">→ Criar conta grátis</a>
+      <a href="#features" class="btn-hero-secondary">Ver como funciona</a>
+    </div>
+    <div class="hero-stats">
+      <div class="h-stat">
+        <div class="h-stat-val">3</div>
+        <div class="h-stat-label">Gateways</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-val">&lt;2min</div>
+        <div class="h-stat-label">Setup</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-val">100%</div>
+        <div class="h-stat-label">Automático</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-val">0</div>
+        <div class="h-stat-label">Código necessário</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GATEWAYS BANNER -->
+<div class="gw-banner">
+  <div class="gw-banner-label">Integrado com</div>
+  <div class="gw-items">
+    <div class="gw-item"><div class="gw-dot" style="background:var(--z1);box-shadow:0 0 6px var(--z1);"></div><span class="gw-name" style="color:var(--z1);">Zero One Pay</span></div>
+    <div class="gw-item"><div class="gw-dot" style="background:var(--pp);box-shadow:0 0 6px var(--pp);"></div><span class="gw-name" style="color:var(--pp);">Paradise Pags</span></div>
+    <div class="gw-item"><div class="gw-dot" style="background:var(--gp);box-shadow:0 0 6px var(--gp);"></div><span class="gw-name" style="color:var(--gp);">GhostsPays</span></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-tag">Features</div>
+      <h2 class="section-title">Tudo que você precisa<br>num único painel</h2>
+      <p class="section-sub">Do QR code ao redirecionamento pós-pago, o PayOS cobre todo o fluxo de cobrança sem você escrever uma linha de código.</p>
+    </div>
+    <div class="features-grid reveal">
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.15);">⚡</div>
+        <div class="feat-title">PIX instantâneo</div>
+        <div class="feat-desc">Gere QR codes PIX em segundos com qualquer um dos 3 gateways suportados. Sem intermediários.</div>
+        <span class="feat-tag" style="background:rgba(0,229,255,.08);color:var(--accent);border:1px solid rgba(0,229,255,.15);">Core</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.15);">◎</div>
+        <div class="feat-title">Webhooks automáticos</div>
+        <div class="feat-desc">Receba notificações em tempo real quando um pagamento for confirmado. Uma URL, todos os gateways.</div>
+        <span class="feat-tag" style="background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.15);">Automação</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(192,132,252,.08);border-color:rgba(192,132,252,.15);">⊕</div>
+        <div class="feat-title">Integrador de Sites</div>
+        <div class="feat-desc">Cole o HTML do seu site e o PayOS injeta o script PIX automaticamente. Modal popup ou página dedicada.</div>
+        <span class="feat-tag" style="background:rgba(192,132,252,.08);color:var(--pp);border:1px solid rgba(192,132,252,.15);">No-code</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(255,184,0,.08);border-color:rgba(255,184,0,.15);">↗</div>
+        <div class="feat-title">Upsell automático</div>
+        <div class="feat-desc">Configure uma URL de redirecionamento e o cliente é enviado automaticamente após o pagamento ser confirmado.</div>
+        <span class="feat-tag" style="background:rgba(255,184,0,.08);color:var(--amber);border:1px solid rgba(255,184,0,.15);">Conversão</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(129,140,248,.08);border-color:rgba(129,140,248,.15);">⇄</div>
+        <div class="feat-title">Multi-produto</div>
+        <div class="feat-desc">Crie quantos produtos quiser, cada um com seu gateway, valor, cor e URL de redirecionamento.</div>
+        <span class="feat-tag" style="background:rgba(129,140,248,.08);color:var(--gp);border:1px solid rgba(129,140,248,.15);">Escala</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.15);">▣</div>
+        <div class="feat-title">Dashboard completo</div>
+        <div class="feat-desc">Acompanhe todas as transações, volume gerado e status dos pagamentos em tempo real no painel.</div>
+        <span class="feat-tag" style="background:rgba(0,229,255,.08);color:var(--accent);border:1px solid rgba(0,229,255,.15);">Analytics</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-tag" style="justify-content:center;">Como funciona</div>
+      <h2 class="section-title" style="text-align:center;">Pronto em 4 passos</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-step reveal reveal-delay-1">
+        <div class="how-num">01</div>
+        <div class="how-step-title">Crie sua conta</div>
+        <div class="how-step-desc">Cadastro gratuito em menos de 1 minuto. Sem cartão de crédito necessário.</div>
+      </div>
+      <div class="how-step reveal reveal-delay-2">
+        <div class="how-num">02</div>
+        <div class="how-step-title">Configure o gateway</div>
+        <div class="how-step-desc">Conecte sua gateway de pagamento com sua API key.</div>
+      </div>
+      <div class="how-step reveal reveal-delay-3">
+        <div class="how-num">03</div>
+        <div class="how-step-title">Crie seu produto</div>
+        <div class="how-step-desc">Defina nome, valor, cor e URL de upsell. Pronto para cobrar.</div>
+      </div>
+      <div class="how-step reveal reveal-delay-4">
+        <div class="how-num">04</div>
+        <div class="how-step-title">Cole no site</div>
+        <div class="how-step-desc">Copie 2 linhas de script e cole no seu HTML. PIX funcionando.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-tag" style="justify-content:center;">Preços</div>
+      <h2 class="section-title" style="text-align:center;">Simples e transparente</h2>
+      <p class="section-sub" style="margin:0 auto;text-align:center;">Sem taxa por transação. Você paga uma mensalidade fixa e fica com 100% do que receber.</p>
+    </div>
+    <div class="pricing-grid reveal">
+      <div class="price-card">
+        <div class="price-name">Starter</div>
+        <div class="price-val"><span>R$</span> 0</div>
+        <div class="price-period">Para sempre grátis</div>
+        <div class="price-divider"></div>
+        <div class="price-features">
+          <div class="pf"><span class="pf-check">✓</span> 1 gateway ativo</div>
+          <div class="pf"><span class="pf-check">✓</span> Até 3 produtos</div>
+          <div class="pf"><span class="pf-check">✓</span> Integrador PIX</div>
+          <div class="pf"><span class="pf-x">✗</span> <span style="color:var(--text3)">Múltiplos gateways</span></div>
+          <div class="pf"><span class="pf-x">✗</span> <span style="color:var(--text3)">Upsell automático</span></div>
+          <div class="pf"><span class="pf-x">✗</span> <span style="color:var(--text3)">Integrador de sites</span></div>
+        </div>
+        <button class="price-btn">→ Começar grátis</button>
+      </div>
+      <div class="price-card featured">
+        <div class="price-featured-badge">⚡ Mais popular</div>
+        <div class="price-name">Pro</div>
+        <div class="price-val" style="color:var(--accent);"><span>R$</span> 87</div>
+        <div class="price-period">/mês · cancele quando quiser</div>
+        <div class="price-divider"></div>
+        <div class="price-features">
+          <div class="pf"><span class="pf-check">✓</span> Todos os gateways</div>
+          <div class="pf"><span class="pf-check">✓</span> Produtos ilimitados</div>
+          <div class="pf"><span class="pf-check">✓</span> Upsell automático</div>
+          <div class="pf"><span class="pf-check">✓</span> Modal + Página dedicada</div>
+          <div class="pf"><span class="pf-check">✓</span> Integrador de sites</div>
+          <div class="pf"><span class="pf-check">✓</span> Suporte prioritário</div>
+        </div>
+        <button class="price-btn featured-btn">→ Assinar Pro</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">Enterprise</div>
+        <div class="price-val">Custom</div>
+        <div class="price-period">Para grandes operações</div>
+        <div class="price-divider"></div>
+        <div class="price-features">
+          <div class="pf"><span class="pf-check">✓</span> Tudo do Pro</div>
+          <div class="pf"><span class="pf-check">✓</span> Gateways customizados</div>
+          <div class="pf"><span class="pf-check">✓</span> Adquirente integrada</div>
+          <div class="pf"><span class="pf-check">✓</span> Suporte 24h</div>
+          <div class="pf"><span class="pf-check">✓</span> Produtos ilimitados</div>
+        </div>
+        <button class="price-btn">→ Falar com equipe</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section>
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-tag" style="justify-content:center;">Depoimentos</div>
+      <h2 class="section-title" style="text-align:center;">Quem já usa o PayOS</h2>
+    </div>
+    <div class="test-grid reveal">
+      <div class="test-card">
+        <div class="test-stars">⭐⭐⭐⭐⭐</div>
+        <p class="test-text">"Configurei o PIX no meu site de cursos em menos de 5 minutos. O upsell automático sozinho já pagou o plano várias vezes."</p>
+        <div class="test-author">
+          <div class="test-avatar" style="background:linear-gradient(135deg,var(--accent),var(--green));">RS</div>
+          <div><div class="test-name">Rafael S.</div><div class="test-role">Infoprodutor · São Paulo</div></div>
+        </div>
+      </div>
+      <div class="test-card">
+        <div class="test-stars">⭐⭐⭐⭐⭐</div>
+        <p class="test-text">"Usava 3 ferramentas diferentes pra cobrar PIX. Com o PayOS centralizei tudo, integrei os 3 gateways e agora é só receber."</p>
+        <div class="test-author">
+          <div class="test-avatar" style="background:linear-gradient(135deg,var(--pp),var(--gp));">MC</div>
+          <div><div class="test-name">Marina C.</div><div class="test-role">Dropshipping · Rio de Janeiro</div></div>
+        </div>
+      </div>
+      <div class="test-card">
+        <div class="test-stars">⭐⭐⭐⭐⭐</div>
+        <p class="test-text">"O integrador de sites é genial. Cola o HTML, clica em integrar, pronto. Meus clientes pagam PIX direto na minha landing page."</p>
+        <div class="test-author">
+          <div class="test-avatar" style="background:linear-gradient(135deg,var(--amber),var(--z1));">TL</div>
+          <div><div class="test-name">Thiago L.</div><div class="test-role">Marketing Digital · BH</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-tag" style="justify-content:center;">FAQ</div>
+      <h2 class="section-title" style="text-align:center;">Perguntas frequentes</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)"><span>Preciso saber programar para usar o PayOS?</span><span class="faq-arrow">▶</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Não. O PayOS foi feito para infoprodutores e vendedores digitais sem conhecimento técnico. O Integrador de Sites faz tudo automaticamente — você só cola o HTML.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)"><span>Quais gateways PIX são suportados?</span><span class="faq-arrow">▶</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Atualmente suportamos Zero One Pay, Paradise Pags e GhostsPays. Você pode usar os 3 simultaneamente no plano Pro, com produtos diferentes em cada gateway.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)"><span>O PayOS cobra taxa por transação?</span><span class="faq-arrow">▶</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Não. O PayOS cobra apenas uma mensalidade fixa. As taxas de transação são cobradas diretamente pelo gateway (Z1, Paradise ou GhostsPays), não por nós.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)"><span>Como funciona o upsell automático?</span><span class="faq-arrow">▶</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Você cadastra uma URL de redirecionamento no produto. Assim que o pagamento PIX for confirmado pelo gateway, o cliente é redirecionado automaticamente para a URL de upsell — sem intervenção manual.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)"><span>Posso usar no plano gratuito sem limite de tempo?</span><span class="faq-arrow">▶</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Sim. O plano Starter é gratuito para sempre, com 1 gateway e até 3 produtos. Você só precisa fazer upgrade se quiser múltiplos gateways, produtos ilimitados e o integrador de sites completo.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section" id="cta">
+  <div class="cta-bg-orb"></div>
+  <div class="cta-inner reveal">
+    <div class="section-tag" style="justify-content:center;margin-bottom:20px;">Comece agora</div>
+    <h2 class="cta-title">Seu PIX, <span class="accent">automatizado</span>.</h2>
+    <p class="cta-sub">Crie sua conta em 30 segundos e comece a receber hoje. Grátis, sem cartão de crédito.</p>
+    <div class="cta-form">
+      <input class="cta-input" type="email" placeholder="seu@email.com">
+      <button class="cta-btn">→ Entrar</button>
+    </div>
+    <div class="cta-note">Grátis · Sem cartão · Cancele quando quiser</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">PayOS</div>
+  <div class="footer-copy">© 2025 PayOS · PIX Gateway Suite</div>
+  <div class="footer-links">
+    <a href="#">Termos</a>
+    <a href="#">Privacidade</a>
+    <a href="#">Suporte</a>
+  </div>
+</footer>
+
+<script>
+// FAQ toggle
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Smooth nav links
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+  });
+});
+</script>
+</body>
+</html>
