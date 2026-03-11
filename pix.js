@@ -190,7 +190,7 @@
         <div id="payos-body">
           <div id="payos-loading"><div class="payos-spin"></div><br>Gerando PIX...</div>
         </div>
-        <div id="payos-footer">Pagamento seguro via <a href="https://pixflow1.vercel.app" target="_blank">PayOS</a></div>
+        <div id="payos-footer">Pagamento seguro 🔒</div>
       </div>
     `;
     overlay.addEventListener('click', function(e) { if (e.target === overlay) PayOS.fechar(); });
