@@ -1041,7 +1041,7 @@ async function checkNewPayments() {
   const { data } = await sb.from('transactions')
     .select('*')
     .eq('user_id', currentUser.id)
-    .in('status', ['pago','paid','approved'])
+    .in('status', ['pago','paid','approved','pending','pendente'])
     .order('created_at', { ascending: false })
     .limit(20);
   if (!data?.length) return;
@@ -1062,7 +1062,7 @@ async function initPWAAfterLogin() {
   await initPWA();
   const granted = await requestNotifPermission();
   if (granted) {
-    setInterval(checkNewPayments, 15000);
+    setInterval(checkNewPayments, 5000);
   }
 }
 
