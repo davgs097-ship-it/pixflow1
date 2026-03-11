@@ -56,8 +56,8 @@ self.addEventListener('message', e => {
   if (e.data?.type === 'NOTIFY_PAYMENT') {
     const { amount, product, gateway } = e.data;
     const gwLabel = gateway === 'zero_one_pay' ? 'Zero One' : gateway === 'ghosts_pays' ? 'GhostsPays' : 'Paradise';
-    self.registration.showNotification('💸 PayOS — Pagamento confirmado!', {
-      body: `✅ R$ ${amount} recebido${product ? ' · ' + product : ''}  [${gwLabel}]`,
+    self.registration.showNotification('PayOS', {
+      body: `Venda pendente · ${amount} · ${gwLabel}`,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: 'payos-payment-' + Date.now(),
