@@ -174,9 +174,19 @@
       }, 1000);
     }
 
-    function showConfirmed(redirectUrl) {
+    function showConfirmed(redirectUrl, cfg) {
       clearInterval(timerIv);
       clearInterval(pollIv);
+
+      // Dispara notificação PWA
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'NOTIFY_PAYMENT',
+          amount: cfg ? 'R$ ' + (cfg.amount/100).toFixed(2).replace('.',',') : '',
+          product: cfg?.description || cfg?.product_name || '',
+          gateway: cfg?.gateway || ''
+        });
+      }
       const content = document.getElementById('content');
       content.innerHTML = `
         <div class="confirmed">
@@ -197,7 +207,7 @@
       }
     }
 
-    function startPolling(since, userId, redirectUrl) {
+    function startPolling(since, userId, redirectUrl, cfg) {
       clearInterval(pollIv);
       const finalUrl = buildRedirectUrl(redirectUrl);
       pollIv = setInterval(async () => {
@@ -208,7 +218,7 @@
             body: JSON.stringify({ user_id: userId, since })
           });
           const data = await res.json();
-          if (data && data.paid) showConfirmed(finalUrl);
+          if (data && data.paid) showConfirmed(finalUrl, cfg);
         } catch(e) {}
       }, 3000);
     }
@@ -253,7 +263,7 @@
       new QRCode(document.getElementById('qr-canvas'), { text: code, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
       startTimer(15);
       const since = new Date().toISOString();
-      startPolling(since, userId, cfg.redirect_url || null);
+      startPolling(since, userId, cfg.redirect_url || null, cfg);
     }
 
     async function init() {
@@ -355,6 +365,11 @@
     }
 
     init();
+
+    // Registra SW para notificações
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   </script>
 </body>
 </html>
