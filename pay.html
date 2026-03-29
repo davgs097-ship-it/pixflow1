@@ -236,11 +236,15 @@
 
     function renderPix(cfg, code) {
       pixCode = code;
+
+      // Gera QR como data URL via API externa
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`;
+
       const content = document.getElementById('content');
       content.innerHTML = `
         <h2>Escaneie o QR-code ou copie o código.</h2>
         <p class="subtitle">${cfg.description || 'Finalize seu pagamento via PIX'}</p>
-        <div class="qr-wrap"><div id="qr-canvas"></div></div>
+        <div class="qr-wrap"><img src="${qrUrl}" width="200" height="200" alt="QR Code PIX" style="border-radius:8px;"></div>
         <div class="amount-row">
           <span class="amount-label">Valor PIX:</span>
           <span class="amount-value">${fmtBRL(cfg.amount)}</span>
@@ -259,23 +263,6 @@
       `;
       content.style.display = 'block';
       document.getElementById('loading').style.display = 'none';
-
-      function drawQR() {
-        const el = document.getElementById('qr-canvas');
-        if (!el) return;
-        el.innerHTML = '';
-        new QRCode(el, { text: code, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
-      }
-
-      if (window.QRCode) {
-        setTimeout(drawQR, 50);
-      } else {
-        const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-        s.onload = () => setTimeout(drawQR, 50);
-        document.head.appendChild(s);
-      }
-
       startTimer(15);
       const since = new Date().toISOString();
       startPolling(since, userId, cfg.redirect_url || null, cfg);
