@@ -259,7 +259,23 @@
       `;
       content.style.display = 'block';
       document.getElementById('loading').style.display = 'none';
-      new QRCode(document.getElementById('qr-canvas'), { text: code, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
+
+      function drawQR() {
+        const el = document.getElementById('qr-canvas');
+        if (!el) return;
+        el.innerHTML = '';
+        new QRCode(el, { text: code, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
+      }
+
+      if (window.QRCode) {
+        setTimeout(drawQR, 50);
+      } else {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        s.onload = () => setTimeout(drawQR, 50);
+        document.head.appendChild(s);
+      }
+
       startTimer(15);
       const since = new Date().toISOString();
       startPolling(since, userId, cfg.redirect_url || null, cfg);
