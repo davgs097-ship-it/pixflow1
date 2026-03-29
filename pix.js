@@ -209,7 +209,9 @@
       <div id="payos-timer">⏱ Expira em <span id="payos-countdown">15:00</span></div>
     `;
     PayOS._pixCode = pixCode;
-    loadQRLib(() => drawQR('payos-qr', pixCode));
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixCode)}`;
+    const qrWrap = document.getElementById('payos-qr-wrap');
+    if (qrWrap) qrWrap.innerHTML = `<img src="${qrUrl}" width="200" height="200" alt="QR Code PIX" style="display:block;border-radius:4px;">`;
     startTimer('payos-countdown', 15);
   }
 
@@ -345,8 +347,8 @@
         document.getElementById('payos-il-copy').onclick = function() {
           navigator.clipboard.writeText(pixCode).then(() => { this.textContent='✓ Copiado!'; this.style.background='#22c55e'; setTimeout(()=>{this.textContent='📋 Copiar código PIX';this.style.background=accentColor;},2500); });
         };
-        const drawQR = () => new QRCode(document.getElementById(qrId), {text:pixCode,width:200,height:200,colorDark:'#000',colorLight:'#fff'});
-        if (window.QRCode) drawQR(); else { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.onload=drawQR; document.head.appendChild(s); }
+        const drawQR = () => { const el = document.getElementById(qrId); if(el) el.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixCode)}" width="200" height="200" style="display:block;border-radius:4px;">`; };
+        drawQR();
         const since = new Date().toISOString();
         const redirectUrl = cfg.redirect_url || null;
         const pollIv = setInterval(async () => {
