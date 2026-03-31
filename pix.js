@@ -159,7 +159,7 @@
 
   function startRealtime(reference, userId, redirectUrl) {
     stopRealtime();
-    const since = new Date(Date.now() - 5000).toISOString();
+    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const finalUrl = buildRedirectUrl(redirectUrl);
     _realtimeChannel = setInterval(async () => {
       try {
